@@ -139,8 +139,8 @@
 }
 
 /* ── Badges ───────────────────────────────────────────────────────── */
-.badge-rf  { -fx-background-color: #1c2c40; -fx-text-fill: #58a6ff; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 11px; }
-.badge-rv  { -fx-background-color: #1a2d1a; -fx-text-fill: #3fb950; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 11px; }
+.badge-rf  { -fx-background-color: #1a2d1a; -fx-text-fill: #3fb950; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 11px; }
+.badge-rv  { -fx-background-color: #1c2c40; -fx-text-fill: #58a6ff; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 11px; }
 .badge-usd { -fx-background-color: #2d2510; -fx-text-fill: #e3b341; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 11px; }
 
 /* ── Valores positivo/negativo ────────────────────────────────────── */
@@ -188,8 +188,8 @@
     -fx-font-weight: bold;
 }
 .pill-btn:hover { -fx-background-color: #1c2230; -fx-text-fill: #e6edf3; }
-.pill-rf.active  { -fx-background-color: #1c2c40; -fx-text-fill: #58a6ff; -fx-border-color: #58a6ff; }
-.pill-rv.active  { -fx-background-color: #1a2d1a; -fx-text-fill: #3fb950; -fx-border-color: #3fb950; }
+.pill-rf.active  { -fx-background-color: #1a2d1a; -fx-text-fill: #3fb950; -fx-border-color: #3fb950; }
+.pill-rv.active  { -fx-background-color: #1c2c40; -fx-text-fill: #58a6ff; -fx-border-color: #58a6ff; }
 .pill-usd.active { -fx-background-color: #2d2510; -fx-text-fill: #e3b341; -fx-border-color: #e3b341; }
 
 /* ── USD badge ────────────────────────────────────────────────────── */
@@ -212,13 +212,13 @@
 
 /* ── Card section variants — borda lateral colorida ──────────────── */
 .card-rf {
-    -fx-border-color: #2a3441 #2a3441 #2a3441 #58a6ff;
+    -fx-border-color: #2a3441 #2a3441 #2a3441 #3fb950;
     -fx-border-width: 1px 1px 1px 3px;
     -fx-border-radius: 0 10px 10px 0;
     -fx-background-radius: 0 10px 10px 0;
 }
 .card-rv {
-    -fx-border-color: #2a3441 #2a3441 #2a3441 #3fb950;
+    -fx-border-color: #2a3441 #2a3441 #2a3441 #58a6ff;
     -fx-border-width: 1px 1px 1px 3px;
     -fx-border-radius: 0 10px 10px 0;
     -fx-background-radius: 0 10px 10px 0;
@@ -229,8 +229,8 @@
     -fx-border-radius: 0 10px 10px 0;
     -fx-background-radius: 0 10px 10px 0;
 }
-.card-rf   .card-title { -fx-text-fill: #58a6ff; }
-.card-rv   .card-title { -fx-text-fill: #3fb950; }
+.card-rf   .card-title { -fx-text-fill: #3fb950; }
+.card-rv   .card-title { -fx-text-fill: #58a6ff; }
 .card-cons .card-title { -fx-text-fill: #bc8cff; }
 
 /* ── Tables ───────────────────────────────────────────────────────── */

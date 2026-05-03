@@ -40,4 +40,10 @@ public final class FormatUtil {
     public static String sinalPct(double value) {
         return (value >= 0 ? "▲ " : "▼ ") + pct(Math.abs(value));
     }
+
+    public static String brlAbrev(double value) {
+        if (value >= 1_000_000) return String.format(PT_BR, "R$ %.2fM", value / 1_000_000);
+        if (value >= 1_000)     return String.format(PT_BR, "R$ %.1fk", value / 1_000);
+        return brl(value);
+    }
 }
