@@ -1,0 +1,57 @@
+package br.investimentos;
+
+import br.investimentos.db.DatabaseManager;
+import br.investimentos.repository.*;
+import br.investimentos.service.*;
+import br.investimentos.ui.MainWindow;
+import javafx.application.Application;
+import javafx.scene.image.Image;
+import javafx.stage.Stage;
+
+public class Main extends Application {
+
+    @Override
+    public void start(Stage primaryStage) {
+        // Inicializa banco e schema
+        DatabaseManager db = DatabaseManager.getInstance();
+
+        // Repositórios
+        var invRepo   = new InvestimentoRepository();
+        var movRepo   = new MovimentacaoRepository();
+        var aporteRepo= new AporteRvRepository();
+        var vtaRepo   = new VtaMensalRepository();
+        var vacRepo   = new VacMensalRepository();
+        var vaiRepo   = new VaiAnualRepository();
+        var cotaRepo  = new CotacaoRepository();
+
+        // Serviços
+        var taxaSvc      = new TaxaService();
+        var rendSvc      = new RendimentoService(vaiRepo, movRepo, vtaRepo);
+        var rvSvc        = new RendaVariavelService(aporteRepo, vacRepo);
+        var saldoSvc     = new SaldoService(vtaRepo, taxaSvc, rendSvc);
+        var projecaoSvc  = new ProjecaoService(vtaRepo, taxaSvc, rendSvc);
+        var vaiSvc       = new VaiService(invRepo, vaiRepo, vtaRepo, db);
+        var alertaSvc    = new AlertaService(invRepo, vtaRepo, vacRepo);
+        var consolSvc    = new ConsolidacaoService(invRepo, movRepo, vtaRepo, aporteRepo, vacRepo, rendSvc, rvSvc);
+        var cotacaoSvc   = new CotacaoService(cotaRepo, vacRepo);
+
+        // Virada de ano na primeira abertura de jan
+        vaiSvc.virarAno();
+
+        // Janela principal
+        MainWindow window = new MainWindow(
+                primaryStage, invRepo, movRepo, aporteRepo, vtaRepo, vacRepo, vaiRepo,
+                taxaSvc, rendSvc, rvSvc, saldoSvc, projecaoSvc, alertaSvc, consolSvc, cotacaoSvc
+        );
+        window.show();
+    }
+
+    @Override
+    public void stop() {
+        // serviços com recursos serão encerrados via referências se necessário
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
