@@ -3,6 +3,7 @@ package br.investimentos.ui.dolar;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.enums.TipoInvestimento;
 import br.investimentos.repository.InvestimentoRepository;
+import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -21,7 +22,8 @@ public class DolarFormDialog extends Dialog<Void> {
         form.setMinWidth(360);
 
         TextField fNome = new TextField();
-        fNome.setPromptText("Ex: Dólar Reserva");
+        InputUtil.applyUpperCaseFilter(fNome);
+        fNome.setPromptText("Ex: DÓLAR RESERVA");
         addRow(form, 0, "Nome *", fNome);
 
         TextField fNotas = new TextField();

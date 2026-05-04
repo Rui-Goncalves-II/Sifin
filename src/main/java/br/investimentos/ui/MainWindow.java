@@ -8,10 +8,19 @@ import br.investimentos.ui.dolar.DolarListPanel;
 import br.investimentos.ui.rendafixa.RendaFixaListPanel;
 import br.investimentos.ui.rendavariavel.RendaVariavelListPanel;
 import br.investimentos.ui.transacao.TransacaoPanel;
+import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.ui.util.Toast;
+import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 
@@ -57,13 +66,13 @@ public class MainWindow {
         sidebar = new SideBar();
 
         sidebar.addItem(new SideBar.NavItem("🏠", "Dashboard", () -> loadPanel(makeDashboard())));
-        sidebar.addItem(new SideBar.NavItem("🏦", "Renda Fixa", () -> loadPanel(makeRendaFixa())));
+        sidebar.addItem(new SideBar.NavItem(null, loadSidebarIcon("/icons/renda-passiva.png", 22), "Renda Fixa", () -> loadPanel(makeRendaFixa()), false));
         sidebar.addItem(new SideBar.NavItem("💹", "Renda Variável", () -> loadPanel(makeRendaVariavel())));
-        sidebar.addItem(new SideBar.NavItem("💵", "Dólar", () -> loadPanel(makeDolar())));
-        sidebar.addItem(new SideBar.NavItem("🔄", "Transações", () -> loadPanel(makeTransacoes())));
+        sidebar.addItem(new SideBar.NavItem("$", "Dólar", () -> loadPanel(makeDolar())));
+        sidebar.addItem(new SideBar.NavItem("⇄", "Transações", () -> loadPanel(makeTransacoes())));
         sidebar.addSpacer();
         sidebar.addSeparator();
-        sidebar.addItem(new SideBar.NavItem("💸", "Gastos", null, true));
+        sidebar.addItem(new SideBar.NavItem("%", "Gastos", null, true));
 
         // Navega para o Dashboard por padrão
         loadPanel(makeDashboard());
@@ -92,6 +101,39 @@ public class MainWindow {
         return new TransacaoPanel(invRepo, movRepo, aporteRepo);
     }
 
+    private ImageView loadSidebarIcon(String resourcePath, int size) {
+        Image original = new Image(
+            getClass().getResourceAsStream(resourcePath),
+            size * 2, size * 2, true, true
+        );
+        int w = (int) original.getWidth();
+        int h = (int) original.getHeight();
+        WritableImage result = new WritableImage(w, h);
+        PixelReader reader = original.getPixelReader();
+        PixelWriter writer = result.getPixelWriter();
+        Color target = Color.web("#adbac7");
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                Color px = reader.getColor(x, y);
+                double lum = 0.299 * px.getRed() + 0.587 * px.getGreen() + 0.114 * px.getBlue();
+                double alpha = (1.0 - lum) * px.getOpacity();
+                if (alpha > 0.05) {
+                    writer.setColor(x, y, new Color(
+                        target.getRed(), target.getGreen(), target.getBlue(),
+                        Math.min(alpha, 1.0)
+                    ));
+                } else {
+                    writer.setColor(x, y, Color.TRANSPARENT);
+                }
+            }
+        }
+        ImageView iv = new ImageView(result);
+        iv.setFitWidth(size);
+        iv.setFitHeight(size);
+        iv.setSmooth(true);
+        return iv;
+    }
+
     public void loadPanel(Node panel) {
         contentArea.getChildren().setAll(panel);
     }
@@ -101,7 +143,10 @@ public class MainWindow {
         root.setLeft(sidebar);
         root.setCenter(contentArea);
 
-        Scene scene = new Scene(root, 1280, 768);
+        // StackPane de overlay — suporta toast não-bloqueante sobre o conteúdo
+        StackPane rootLayer = new StackPane(root);
+
+        Scene scene = new Scene(rootLayer, 1280, 768);
         scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
 
         stage.setTitle("Sifin — Painel de Investimentos");
@@ -110,9 +155,17 @@ public class MainWindow {
         stage.setMinHeight(600);
         stage.show();
 
-        cotacaoSvc.iniciarRefreshAutomatico(cot -> {
-            // notificação de atualização de cotação já é tratada pelo DashboardPanel via polling ou callback
-        });
+        cotacaoSvc.iniciarRefreshAutomatico(cot -> Platform.runLater(() -> {
+            // Atualiza o dashboard se estiver visível
+            if (!contentArea.getChildren().isEmpty() &&
+                    contentArea.getChildren().get(0) instanceof DashboardPanel dp) {
+                dp.onCotacaoAtualizada();
+            }
+            // Notificação não-bloqueante
+            String msg = "Compra: R$ " + FormatUtil.numero(cot.getValorCompra(), 4)
+                       + "   Venda: R$ " + FormatUtil.numero(cot.getValorVenda(), 4);
+            Toast.show(rootLayer, "Cotação USD atualizada", msg);
+        }));
     }
 
 }

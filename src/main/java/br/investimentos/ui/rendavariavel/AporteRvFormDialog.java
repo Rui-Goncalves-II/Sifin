@@ -4,6 +4,7 @@ import br.investimentos.model.AporteRv;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.enums.TipoOperacaoRv;
 import br.investimentos.repository.AporteRvRepository;
+import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -31,20 +32,25 @@ public class AporteRvFormDialog extends Dialog<Void> {
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         fMes.setValue(hoje.getMonthValue());
-        TextField fAno = new TextField(String.valueOf(hoje.getYear())); fAno.setPrefWidth(70);
+        TextField fAno = new TextField(); fAno.setPrefWidth(70);
+        InputUtil.applyIntegerFilter(fAno);
+        fAno.setText(String.valueOf(hoje.getYear()));
         HBox perBox = new HBox(8, fMes, new Label("/ "), fAno);
         perBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         addRow(form, 1, "Período", perBox);
 
         TextField fQtd = new TextField();
-        fQtd.setPromptText("0.0 (deixar vazio para DIVIDENDO)");
+        InputUtil.applyDecimalFilter(fQtd);
+        fQtd.setPromptText("0,0 (deixar vazio para DIVIDENDO)");
         addRow(form, 2, "Quantidade", fQtd);
 
         TextField fPreco = new TextField();
+        InputUtil.applyDecimalFilter(fPreco);
         fPreco.setPromptText("Preço por cota (deixar vazio para DIVIDENDO)");
         addRow(form, 3, "Preço/Cota (R$)", fPreco);
 
         TextField fValor = new TextField();
+        InputUtil.applyDecimalFilter(fValor);
         fValor.setPromptText("Valor total");
         addRow(form, 4, "Valor Total (R$) *", fValor);
 

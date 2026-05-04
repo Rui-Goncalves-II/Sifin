@@ -290,3 +290,19 @@ F5 – Refinamentos: configurações · backup/restore · exportação CSV · al
 **Dólar:** cache diário em `cotacoes_dolar`; refresh a cada 15 min via `ScheduledExecutorService`.  
 **Virada de ano:** `VaiService.virarAno()` na 1ª abertura após 1º/jan.  
 **Sidebar:** Dashboard é tela padrão. Item Gastos: `setDisable(true)`, tooltip "Em breve".
+
+**Sanitização de input — regra obrigatória:**  
+Nunca confiar no input do usuário. Todo campo de formulário deve ter filtro aplicado diretamente no campo, não apenas na validação ao salvar.
+
+| Tipo de campo | Filtro | Classe utilitária |
+|---|---|---|
+| Valor monetário / decimal | Apenas dígitos e `,` (padrão BR); ponto convertido automaticamente em vírgula; máximo uma vírgula; sinal negativo opcional no início | `InputUtil.applyDecimalFilter(field)` |
+| Ano / inteiro | Apenas dígitos, sem letras ou símbolos | `InputUtil.applyIntegerFilter(field)` |
+| Nome de ativo | Convertido para maiúsculas em tempo real; sem restrição de caracteres | `InputUtil.applyUpperCaseFilter(field)` |
+| Texto livre (notas) | Sem filtro de caractere, mas `strip()` antes de persistir | — |
+
+**Regras de aplicação:**
+- Aplicar o `TextFormatter` **antes** de setar qualquer valor inicial com `setText()`.
+- Construir o `TextField` vazio e depois chamar `setText()` para que o formatter normalize o valor (ex.: converte `"12.5"` → `"12,5"` automaticamente).
+- Campos numéricos devem exibir placeholder com vírgula: `"Ex: 12,5"`, nunca ponto.
+- Ao pré-preencher valores vindos do banco (`double`/`String.valueOf`), chamar `.replace(".", ",")` no texto antes de passar ao `setText()` se o formatter ainda não estiver aplicado.

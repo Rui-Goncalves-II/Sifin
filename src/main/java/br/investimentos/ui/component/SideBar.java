@@ -2,6 +2,7 @@ package br.investimentos.ui.component;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
@@ -16,13 +17,18 @@ public class SideBar extends VBox {
 
     private final List<NavButton> navButtons = new ArrayList<>();
 
-    public record NavItem(String icon, String label, Runnable action, boolean disabled) {
-        public NavItem(String icon, String label, Runnable action) { this(icon, label, action, false); }
+    public record NavItem(String icon, Node graphic, String label, Runnable action, boolean disabled) {
+        public NavItem(String icon, String label, Runnable action) { this(icon, null, label, action, false); }
+        public NavItem(String icon, String label, Runnable action, boolean disabled) { this(icon, null, label, action, disabled); }
     }
 
     private static class NavButton extends Button {
-        NavButton(String icon, String label, boolean disabled) {
-            setText(icon);
+        NavButton(String icon, Node graphic, String label, boolean disabled) {
+            if (graphic != null) {
+                setGraphic(graphic);
+            } else {
+                setText(icon != null ? icon : "");
+            }
             getStyleClass().add("nav-item");
             setMaxWidth(Double.MAX_VALUE);
             setDisable(disabled);
@@ -53,7 +59,7 @@ public class SideBar extends VBox {
     }
 
     public void addItem(NavItem item) {
-        NavButton btn = new NavButton(item.icon(), item.label(), item.disabled());
+        NavButton btn = new NavButton(item.icon(), item.graphic(), item.label(), item.disabled());
         if (!item.disabled() && item.action() != null) {
             btn.setOnAction(e -> {
                 setActiveButton(btn);

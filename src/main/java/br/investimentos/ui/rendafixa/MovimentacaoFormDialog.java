@@ -4,6 +4,7 @@ import br.investimentos.model.Investimento;
 import br.investimentos.model.Movimentacao;
 import br.investimentos.model.enums.TipoMovimentacao;
 import br.investimentos.repository.MovimentacaoRepository;
+import br.investimentos.ui.util.InputUtil;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -37,15 +38,18 @@ public class MovimentacaoFormDialog extends Dialog<Boolean> {
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         fMes.setValue(mov.getPeriodoMes() != 0 ? mov.getPeriodoMes() : hoje.getMonthValue());
-        TextField fAno = new TextField(
-                mov.getPeriodoAno() != 0 ? String.valueOf(mov.getPeriodoAno()) : String.valueOf(hoje.getYear()));
+        TextField fAno = new TextField();
         fAno.setPrefWidth(80);
+        InputUtil.applyIntegerFilter(fAno);
+        fAno.setText(mov.getPeriodoAno() != 0 ? String.valueOf(mov.getPeriodoAno()) : String.valueOf(hoje.getYear()));
         HBox periodoBox = new HBox(8, fMes, new Label("/ "), fAno);
         periodoBox.setAlignment(Pos.CENTER_LEFT);
         addRow(form, 1, "Período (mês/ano) *", periodoBox);
 
-        TextField fValor = new TextField(mov.getValor() != 0 ? String.valueOf(mov.getValor()) : "");
+        TextField fValor = new TextField();
+        InputUtil.applyDecimalFilter(fValor);
         fValor.setPromptText("Sempre positivo");
+        if (mov.getValor() != 0) fValor.setText(String.valueOf(mov.getValor()));
         addRow(form, 2, "Valor (R$) *", fValor);
 
         TextField fNotas = new TextField(mov.getNotas() != null ? mov.getNotas() : "");

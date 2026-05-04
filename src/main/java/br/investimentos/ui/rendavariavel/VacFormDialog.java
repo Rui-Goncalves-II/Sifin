@@ -5,6 +5,7 @@ import br.investimentos.model.VacMensal;
 import br.investimentos.repository.VacMensalRepository;
 import br.investimentos.service.CotacaoService;
 import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -30,13 +31,16 @@ public class VacFormDialog extends Dialog<Void> {
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         fMes.setValue(mesAtual);
-        TextField fAno = new TextField(String.valueOf(anoAtual));
+        TextField fAno = new TextField();
         fAno.setPrefWidth(80);
+        InputUtil.applyIntegerFilter(fAno);
+        fAno.setText(String.valueOf(anoAtual));
         HBox periodoBox = new HBox(8, fMes, new Label("/ "), fAno);
         periodoBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         addRow(form, 0, "Período", periodoBox);
 
         TextField fVac = new TextField();
+        InputUtil.applyDecimalFilter(fVac);
         fVac.setPromptText("Valor atual por cota");
         addRow(form, 1, "VAC (R$) *", fVac);
 

@@ -33,7 +33,6 @@ public final class FormatUtil {
         return String.format("%02d/%d", mes, ano);
     }
 
-    /** Sinal ▲/▼ + valor formatado */
     public static String sinalBrl(double value) {
         return (value >= 0 ? "▲ " : "▼ ") + brl(Math.abs(value));
     }
@@ -43,8 +42,14 @@ public final class FormatUtil {
     }
 
     public static String brlAbrev(double value) {
-        if (value >= 1_000_000) return String.format(PT_BR, "R$ %.2fM", value / 1_000_000);
-        if (value >= 1_000)     return String.format(PT_BR, "R$ %.1fk", value / 1_000);
+        if (value >= 1_000_000) return String.format(PT_BR, "R$ %.2fM", value / 1_000_000);
+        if (value >= 1_000)     return String.format(PT_BR, "R$ %.1fk", value / 1_000);
         return brl(value);
+    }
+
+    public static double headerW(String title) {
+        javafx.scene.text.Text t = new javafx.scene.text.Text(title);
+        t.setFont(javafx.scene.text.Font.font("SansSerif", javafx.scene.text.FontWeight.BOLD, 11));
+        return Math.ceil(t.getBoundsInLocal().getWidth()) + 32;
     }
 }

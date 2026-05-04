@@ -5,6 +5,7 @@ import br.investimentos.model.VtaMensal;
 import br.investimentos.repository.*;
 import br.investimentos.service.RendimentoService;
 import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -41,14 +42,17 @@ public class VtaFormDialog extends Dialog<Void> {
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         fMes.setValue(mesDefault);
-        TextField fAno = new TextField(String.valueOf(anoDefault));
+        TextField fAno = new TextField();
         fAno.setPrefWidth(80);
+        InputUtil.applyIntegerFilter(fAno);
+        fAno.setText(String.valueOf(anoDefault));
         HBox periodoBox = new HBox(8, fMes, new Label("/ "), fAno);
         periodoBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         addRow(form, 0, "Período (mês/ano)", periodoBox);
 
         // VTA
         TextField fVta = new TextField();
+        InputUtil.applyDecimalFilter(fVta);
         fVta.setPromptText("Valor total atual do investimento");
         addRow(form, 1, "VTA (R$) *", fVta);
 

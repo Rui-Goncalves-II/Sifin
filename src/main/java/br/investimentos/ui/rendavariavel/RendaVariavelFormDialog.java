@@ -3,6 +3,7 @@ package br.investimentos.ui.rendavariavel;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.enums.TipoInvestimento;
 import br.investimentos.repository.InvestimentoRepository;
+import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -21,11 +22,12 @@ public class RendaVariavelFormDialog extends Dialog<Void> {
         form.setMinWidth(400);
 
         TextField fNome = new TextField();
-        fNome.setPromptText("Ex: HGLG11 Carteira");
+        InputUtil.applyUpperCaseFilter(fNome);
+        fNome.setPromptText("Ex: HGLG11 CARTEIRA");
         addRow(form, 0, "Nome *", fNome);
 
         ComboBox<String> fSub = new ComboBox<>();
-        fSub.getItems().addAll("FII", "ACAO", "ETF");
+        fSub.getItems().addAll("FII", "ACAO", "ETF", "BDR");
         fSub.setEditable(true);
         fSub.setPromptText("FII, ACAO, ETF...");
         addRow(form, 1, "Subtipo", fSub);

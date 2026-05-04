@@ -3,6 +3,7 @@ package br.investimentos.ui.rendafixa;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.enums.TipoInvestimento;
 import br.investimentos.repository.InvestimentoRepository;
+import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -27,7 +28,8 @@ public class RendaFixaFormDialog extends Dialog<Void> {
 
         // Nome
         TextField fNome = new TextField();
-        fNome.setPromptText("Ex: Porquinho CDB");
+        InputUtil.applyUpperCaseFilter(fNome);
+        fNome.setPromptText("Ex: PORQUINHO CDB");
         addRow(form, 0, "Nome *", fNome);
 
         // Subtipo
@@ -46,7 +48,8 @@ public class RendaFixaFormDialog extends Dialog<Void> {
 
         // Taxa anual
         TextField fTaxa = new TextField();
-        fTaxa.setPromptText("Ex: 12.5 (opcional — usa cálculo se vazio)");
+        InputUtil.applyDecimalFilter(fTaxa);
+        fTaxa.setPromptText("Ex: 12,5 (opcional — usa cálculo se vazio)");
         addRow(form, 3, "Taxa Anual %", fTaxa);
 
         // Vencimento
@@ -64,7 +67,7 @@ public class RendaFixaFormDialog extends Dialog<Void> {
             fNome.setText(inv.getNome());
             if (inv.getSubtipo() != null) fSub.setValue(inv.getSubtipo());
             if (inv.getIndexador() != null) fIdx.setValue(inv.getIndexador());
-            if (inv.getTaxaAnual() != null) fTaxa.setText(String.valueOf(inv.getTaxaAnual()));
+            if (inv.getTaxaAnual() != null) fTaxa.setText(String.valueOf(inv.getTaxaAnual()).replace(".", ","));
             if (inv.getDataVencimento() != null) fVenc.setText(inv.getDataVencimento());
             if (inv.getNotas() != null) fNotas.setText(inv.getNotas());
         }

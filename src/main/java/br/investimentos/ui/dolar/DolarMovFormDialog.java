@@ -5,6 +5,7 @@ import br.investimentos.model.Investimento;
 import br.investimentos.model.Movimentacao;
 import br.investimentos.model.enums.TipoMovimentacao;
 import br.investimentos.repository.MovimentacaoRepository;
+import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -32,16 +33,20 @@ public class DolarMovFormDialog extends Dialog<Void> {
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         fMes.setValue(hoje.getMonthValue());
-        TextField fAno = new TextField(String.valueOf(hoje.getYear())); fAno.setPrefWidth(70);
+        TextField fAno = new TextField(); fAno.setPrefWidth(70);
+        InputUtil.applyIntegerFilter(fAno);
+        fAno.setText(String.valueOf(hoje.getYear()));
         HBox perBox = new HBox(8, fMes, new Label("/ "), fAno);
         perBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         addRow(form, 1, "Período", perBox);
 
         TextField fValor = new TextField();
+        InputUtil.applyDecimalFilter(fValor);
         fValor.setPromptText("Valor em USD");
         addRow(form, 2, "Valor (USD) *", fValor);
 
         TextField fCot = new TextField();
+        InputUtil.applyDecimalFilter(fCot);
         fCot.setPromptText("Cotação R$/USD na data");
         addRow(form, 3, "Cotação R$/USD", fCot);
 

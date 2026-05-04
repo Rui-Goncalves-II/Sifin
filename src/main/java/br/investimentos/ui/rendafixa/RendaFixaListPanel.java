@@ -54,8 +54,11 @@ public class RendaFixaListPanel extends BorderPane {
         // Table
         table = new TableView<>();
         table.getStyleClass().add("table-view");
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        TableColumn<Investimento, String> colNome = col("Nome", 220);
+        TableColumn<Investimento, String> colNome = new TableColumn<>("Nome");
+        colNome.setMinWidth(headerW("Nome"));
+        colNome.setPrefWidth(220);
         colNome.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getNome()));
 
         TableColumn<Investimento, String> colSub = col("Subtipo", 90);
@@ -83,7 +86,10 @@ public class RendaFixaListPanel extends BorderPane {
                 c.getValue().getDataVencimento() != null ? c.getValue().getDataVencimento() : "—"));
 
         TableColumn<Investimento, Void> colAcoes = new TableColumn<>("Ações");
-        colAcoes.setPrefWidth(140);
+        double acoesW = Math.max(140, headerW("Ações"));
+        colAcoes.setMinWidth(acoesW);
+        colAcoes.setPrefWidth(acoesW);
+        colAcoes.setMaxWidth(acoesW);
         colAcoes.setCellFactory(tc -> new TableCell<>() {
             final Button btnVer = new Button("👁");
             final Button btnVta = new Button("VTA");
@@ -110,6 +116,7 @@ public class RendaFixaListPanel extends BorderPane {
         });
 
         table.getColumns().addAll(colNome, colSub, colIdx, colTaxa, colSaldo, colVenc, colAcoes);
+
         table.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2 && table.getSelectionModel().getSelectedItem() != null) {
                 Investimento inv = table.getSelectionModel().getSelectedItem();
@@ -125,10 +132,18 @@ public class RendaFixaListPanel extends BorderPane {
         refresh();
     }
 
-    private <T> TableColumn<Investimento, T> col(String title, double width) {
+    private <T> TableColumn<Investimento, T> col(String title, double contentMin) {
         TableColumn<Investimento, T> c = new TableColumn<>(title);
-        c.setPrefWidth(width);
+        double w = Math.max(contentMin, headerW(title));
+        c.setMinWidth(w);
+        c.setPrefWidth(w);
         return c;
+    }
+
+    private static double headerW(String title) {
+        javafx.scene.text.Text t = new javafx.scene.text.Text(title);
+        t.setFont(javafx.scene.text.Font.font("SansSerif", javafx.scene.text.FontWeight.BOLD, 11));
+        return Math.ceil(t.getBoundsInLocal().getWidth()) + 32;
     }
 
     private void refresh() {

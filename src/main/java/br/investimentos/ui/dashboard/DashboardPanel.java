@@ -117,10 +117,17 @@ public class DashboardPanel extends BorderPane {
         yearBar.getChildren().add(todos);
     }
 
+    /** Chamado pelo callback de cotação (já na thread JavaFX via Platform.runLater). */
+    public void onCotacaoAtualizada() {
+        refresh();
+        atualizarUsd();
+    }
+
     private void refresh() {
         ConsolidacaoService.ResultadoConsolidado r = consolSvc.calcular(anoSelecionado);
         double dolarBrl = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
         double dolarTotal = calcDolarTotal(dolarBrl);
+        double ptaTotal = r.pta() + dolarTotal;
         LocalDate hoje = LocalDate.now();
         double aporteMes = consolSvc.calcularAportesDoMes(hoje.getMonthValue(), hoje.getYear());
 
@@ -129,14 +136,14 @@ public class DashboardPanel extends BorderPane {
         atualizarAlertas();
         contentBox.getChildren().add(alertBox);
         contentBox.getChildren().add(buildPillsBar(r, dolarTotal));
-        contentBox.getChildren().add(buildKpiGrid(r, aporteMes, hoje));
+        contentBox.getChildren().add(buildKpiGrid(r, aporteMes, hoje, ptaTotal));
 
         HBox rendRow = buildRendimentoCard(r);
         if (!rendRow.getChildren().isEmpty()) contentBox.getChildren().add(rendRow);
 
         contentBox.getChildren().add(buildCharts(r, dolarTotal));
         contentBox.getChildren().add(buildMiniTypeCards(r, dolarTotal));
-        contentBox.getChildren().add(buildAssetsCard(r.pta()));
+        contentBox.getChildren().add(buildAssetsCard(ptaTotal));
     }
 
     // ── Pills bar (display-only totals per type) ────────────────────────
@@ -161,13 +168,13 @@ public class DashboardPanel extends BorderPane {
 
     // ── 4 KPI cards ─────────────────────────────────────────────────────
 
-    private HBox buildKpiGrid(ConsolidacaoService.ResultadoConsolidado r, double aporteMes, LocalDate hoje) {
+    private HBox buildKpiGrid(ConsolidacaoService.ResultadoConsolidado r, double aporteMes, LocalDate hoje, double ptaTotal) {
         HBox row = new HBox(12);
 
         String gpStyle = r.vtra() >= 0 ? "positive" : "negative";
         String gpColor = r.vtra() >= 0 ? "#3fb950" : "#f85149";
 
-        VBox kpi1 = makeKpiCard("Patrimônio Total", FormatUtil.brl(r.pta()), "PTA", "neutral", "#bc8cff");
+        VBox kpi1 = makeKpiCard("Patrimônio Total", FormatUtil.brl(ptaTotal), "PTA", "neutral", "#bc8cff");
         VBox kpi2 = makeKpiCard("Total Investido", FormatUtil.brl(r.vtia()), "VTIA", "neutral", "#58a6ff");
         VBox kpi3 = makeKpiCard("Ganho / Perda", FormatUtil.brl(r.vtra()), "VTRA", gpStyle, gpColor);
         VBox kpi4 = makeKpiCard("Aporte do Mês", FormatUtil.brl(aporteMes),
@@ -261,10 +268,14 @@ public class DashboardPanel extends BorderPane {
         java.awt.Color green    = new java.awt.Color(0x3f, 0xb9, 0x50);
         java.awt.Color red      = new java.awt.Color(0xf8, 0x51, 0x49);
         java.awt.Color blue     = new java.awt.Color(0x58, 0xa6, 0xff);
+        java.awt.Color purple   = new java.awt.Color(0xbc, 0x8c, 0xff);
         java.awt.Color amber    = new java.awt.Color(0xe3, 0xb3, 0x41);
         java.awt.Font  fontSm   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 11);
         java.awt.Font  fontXs   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10);
         java.awt.Font  fontBold = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+        java.awt.BasicStroke lineStroke = new java.awt.BasicStroke(
+                1.5f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND);
+        java.awt.geom.Ellipse2D.Double dotShape = new java.awt.geom.Ellipse2D.Double(-5, -5, 10, 10);
 
         // ── Pie chart ─────────────────────────────────────────────────
         DefaultPieDataset<String> pieData = new DefaultPieDataset<>();
@@ -305,80 +316,153 @@ public class DashboardPanel extends BorderPane {
             pieNode.setContent(cp);
         });
         StackPane pieWrapper = new StackPane(pieNode);
-        pieWrapper.setPrefSize(340, 240);
+        pieWrapper.setPrefSize(300, 240);
 
-        // ── Dot chart (retorno mensal) ─────────────────────────────────
-        DefaultCategoryDataset dotData = buildMonthlyData();
+        // ── Rendimento Mensal ──────────────────────────────────────────
+        DefaultCategoryDataset monthlyData = buildMonthlyData();
 
-        org.jfree.chart.axis.CategoryAxis xAxis = new org.jfree.chart.axis.CategoryAxis(null);
-        xAxis.setTickLabelPaint(textMut);
-        xAxis.setTickLabelFont(fontXs);
-        xAxis.setAxisLinePaint(border);
-        xAxis.setTickMarkPaint(border);
+        org.jfree.chart.axis.CategoryAxis xAxisM = new org.jfree.chart.axis.CategoryAxis(null);
+        xAxisM.setTickLabelPaint(textMut);
+        xAxisM.setTickLabelFont(fontXs);
+        xAxisM.setAxisLinePaint(border);
+        xAxisM.setTickMarkPaint(border);
 
-        org.jfree.chart.axis.NumberAxis yAxis = new org.jfree.chart.axis.NumberAxis("R$");
-        yAxis.setTickLabelPaint(textMut);
-        yAxis.setTickLabelFont(fontXs);
-        yAxis.setAxisLinePaint(border);
-        yAxis.setTickMarkPaint(border);
-        yAxis.setLabelPaint(textMut);
-        yAxis.setLabelFont(fontSm);
+        org.jfree.chart.axis.NumberAxis yAxisM = new org.jfree.chart.axis.NumberAxis("R$");
+        yAxisM.setTickLabelPaint(textMut);
+        yAxisM.setTickLabelFont(fontXs);
+        yAxisM.setAxisLinePaint(border);
+        yAxisM.setTickMarkPaint(border);
+        yAxisM.setLabelPaint(textMut);
+        yAxisM.setLabelFont(fontSm);
 
-        org.jfree.chart.renderer.category.LineAndShapeRenderer dotRenderer =
+        org.jfree.chart.renderer.category.LineAndShapeRenderer monthlyRenderer =
             new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
-                @Override
-                public java.awt.Paint getItemPaint(int row, int column) {
-                    Number val = dotData.getValue(row, column);
+                @Override public java.awt.Paint getItemPaint(int row, int col) { return textMut; }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) {
+                    Number val = monthlyData.getValue(row, col);
                     return (val != null && val.doubleValue() >= 0) ? green : red;
                 }
             };
-        dotRenderer.setDefaultLinesVisible(false);
-        dotRenderer.setDefaultShapesVisible(true);
-        dotRenderer.setDefaultShapesFilled(true);
-        dotRenderer.setDefaultShape(new java.awt.geom.Ellipse2D.Double(-5, -5, 10, 10));
+        monthlyRenderer.setDefaultLinesVisible(true);
+        monthlyRenderer.setDefaultShapesVisible(true);
+        monthlyRenderer.setDefaultShapesFilled(true);
+        monthlyRenderer.setUseFillPaint(true);
+        monthlyRenderer.setDefaultShape(dotShape);
+        monthlyRenderer.setDefaultStroke(lineStroke);
 
-        org.jfree.chart.plot.CategoryPlot dotPlot = new org.jfree.chart.plot.CategoryPlot(
-                dotData, xAxis, yAxis, dotRenderer);
-        dotPlot.setBackgroundPaint(bgCard);
-        dotPlot.setOutlinePaint(border);
-        dotPlot.setRangeGridlinePaint(border);
-        dotPlot.setDomainGridlinesVisible(false);
-        dotPlot.setRangeZeroBaselinePaint(textMut);
-        dotPlot.setRangeZeroBaselineVisible(true);
+        org.jfree.chart.plot.CategoryPlot monthlyPlot = new org.jfree.chart.plot.CategoryPlot(
+                monthlyData, xAxisM, yAxisM, monthlyRenderer);
+        monthlyPlot.setBackgroundPaint(bgCard);
+        monthlyPlot.setOutlinePaint(border);
+        monthlyPlot.setRangeGridlinePaint(border);
+        monthlyPlot.setDomainGridlinesVisible(false);
+        monthlyPlot.setRangeZeroBaselinePaint(textMut);
+        monthlyPlot.setRangeZeroBaselineVisible(true);
 
-        JFreeChart dot = new JFreeChart("Retorno Mensal", fontBold, dotPlot, false);
-        dot.setBackgroundPaint(bgCard);
-        dot.setBorderVisible(false);
-        dot.getTitle().setPaint(textMut);
-        dot.getTitle().setFont(fontBold);
+        JFreeChart monthlyChart = new JFreeChart("Rendimento Mensal", fontBold, monthlyPlot, false);
+        monthlyChart.setBackgroundPaint(bgCard);
+        monthlyChart.setBorderVisible(false);
+        monthlyChart.getTitle().setPaint(textMut);
+        monthlyChart.getTitle().setFont(fontBold);
 
-        SwingNode barNode = new SwingNode();
+        SwingNode monthlyNode = new SwingNode();
         SwingUtilities.invokeLater(() -> {
-            ChartPanel cp = new ChartPanel(dot);
+            ChartPanel cp = new ChartPanel(monthlyChart);
             cp.setBackground(bgCard);
-            barNode.setContent(cp);
+            monthlyNode.setContent(cp);
         });
-        StackPane barWrapper = new StackPane(barNode);
-        barWrapper.setPrefSize(460, 240);
+        StackPane monthlyWrapper = new StackPane(monthlyNode);
+        monthlyWrapper.setPrefSize(360, 240);
+
+        // ── Rendimento Acumulado ───────────────────────────────────────
+        DefaultCategoryDataset accData = buildAccumulatedData();
+
+        org.jfree.chart.axis.CategoryAxis xAxisA = new org.jfree.chart.axis.CategoryAxis(null);
+        xAxisA.setTickLabelPaint(textMut);
+        xAxisA.setTickLabelFont(fontXs);
+        xAxisA.setAxisLinePaint(border);
+        xAxisA.setTickMarkPaint(border);
+
+        org.jfree.chart.axis.NumberAxis yAxisA = new org.jfree.chart.axis.NumberAxis("R$");
+        yAxisA.setTickLabelPaint(textMut);
+        yAxisA.setTickLabelFont(fontXs);
+        yAxisA.setAxisLinePaint(border);
+        yAxisA.setTickMarkPaint(border);
+        yAxisA.setLabelPaint(textMut);
+        yAxisA.setLabelFont(fontSm);
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer accRenderer =
+            new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
+                @Override public java.awt.Paint getItemPaint(int row, int col) { return purple; }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) {
+                    Number val = accData.getValue(row, col);
+                    return (val != null && val.doubleValue() >= 0) ? purple : red;
+                }
+            };
+        accRenderer.setDefaultLinesVisible(true);
+        accRenderer.setDefaultShapesVisible(true);
+        accRenderer.setDefaultShapesFilled(true);
+        accRenderer.setUseFillPaint(true);
+        accRenderer.setDefaultShape(dotShape);
+        accRenderer.setDefaultStroke(lineStroke);
+
+        org.jfree.chart.plot.CategoryPlot accPlot = new org.jfree.chart.plot.CategoryPlot(
+                accData, xAxisA, yAxisA, accRenderer);
+        accPlot.setBackgroundPaint(bgCard);
+        accPlot.setOutlinePaint(border);
+        accPlot.setRangeGridlinePaint(border);
+        accPlot.setDomainGridlinesVisible(false);
+        accPlot.setRangeZeroBaselinePaint(textMut);
+        accPlot.setRangeZeroBaselineVisible(true);
+
+        JFreeChart accChart = new JFreeChart("Rendimento Acumulado", fontBold, accPlot, false);
+        accChart.setBackgroundPaint(bgCard);
+        accChart.setBorderVisible(false);
+        accChart.getTitle().setPaint(textMut);
+        accChart.getTitle().setFont(fontBold);
+
+        SwingNode accNode = new SwingNode();
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(accChart);
+            cp.setBackground(bgCard);
+            accNode.setContent(cp);
+        });
+        StackPane accWrapper = new StackPane(accNode);
+        accWrapper.setPrefSize(360, 240);
 
         VBox pieBox = new VBox(pieWrapper);
         pieBox.getStyleClass().add("card");
         pieBox.setPadding(Insets.EMPTY);
         HBox.setHgrow(pieBox, Priority.NEVER);
 
-        VBox barBox = new VBox(barWrapper);
-        barBox.getStyleClass().add("card");
-        barBox.setPadding(Insets.EMPTY);
-        HBox.setHgrow(barBox, Priority.ALWAYS);
+        VBox monthlyBox = new VBox(monthlyWrapper);
+        monthlyBox.getStyleClass().add("card");
+        monthlyBox.setPadding(Insets.EMPTY);
+        HBox.setHgrow(monthlyBox, Priority.ALWAYS);
 
-        hbox.getChildren().addAll(pieBox, barBox);
+        VBox accBox = new VBox(accWrapper);
+        accBox.getStyleClass().add("card");
+        accBox.setPadding(Insets.EMPTY);
+        HBox.setHgrow(accBox, Priority.ALWAYS);
+
+        hbox.getChildren().addAll(pieBox, monthlyBox, accBox);
         return hbox;
     }
 
     private DefaultCategoryDataset buildMonthlyData() {
         DefaultCategoryDataset ds = new DefaultCategoryDataset();
         for (ConsolidacaoService.VtraMensal m : consolSvc.calcularVtraPorMes(anoSelecionado)) {
-            ds.addValue(m.vtra(), "Retorno", FormatUtil.mesAno(m.mes(), m.ano()));
+            ds.addValue(m.vtra(), "Rendimento", FormatUtil.mesAno(m.mes(), m.ano()));
+        }
+        return ds;
+    }
+
+    private DefaultCategoryDataset buildAccumulatedData() {
+        DefaultCategoryDataset ds = new DefaultCategoryDataset();
+        double acumulado = 0;
+        for (ConsolidacaoService.VtraMensal m : consolSvc.calcularVtraPorMes(anoSelecionado)) {
+            acumulado += m.vtra();
+            ds.addValue(acumulado, "Acumulado", FormatUtil.mesAno(m.mes(), m.ano()));
         }
         return ds;
     }
@@ -431,14 +515,18 @@ public class DashboardPanel extends BorderPane {
         TableView<Investimento> table = new TableView<>();
         table.getStyleClass().add("table-view");
         table.setPrefHeight(220);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         TableColumn<Investimento, String> colNome = new TableColumn<>("Ativo");
-        colNome.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getNome()));
+        colNome.setMinWidth(colW("Ativo", 0));
         colNome.setPrefWidth(200);
+        colNome.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getNome()));
 
         TableColumn<Investimento, String> colTipo = new TableColumn<>("Tipo");
         colTipo.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getTipo().label()));
-        colTipo.setPrefWidth(120);
+        double tipoW = colW("Tipo", 120);
+        colTipo.setMinWidth(tipoW);
+        colTipo.setPrefWidth(tipoW);
 
         TableColumn<Investimento, String> colSaldo = new TableColumn<>("Saldo Atual");
         colSaldo.setCellValueFactory(c -> {
@@ -450,7 +538,9 @@ public class DashboardPanel extends BorderPane {
             };
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(saldo));
         });
-        colSaldo.setPrefWidth(140);
+        double saldoW = colW("Saldo Atual", 140);
+        colSaldo.setMinWidth(saldoW);
+        colSaldo.setPrefWidth(saldoW);
 
         TableColumn<Investimento, String> colPct = new TableColumn<>("% Carteira");
         colPct.setCellValueFactory(c -> {
@@ -463,9 +553,12 @@ public class DashboardPanel extends BorderPane {
             double pct = pta > 0 ? saldo / pta * 100 : 0;
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.pct(pct));
         });
-        colPct.setPrefWidth(100);
+        double pctW = colW("% Carteira", 100);
+        colPct.setMinWidth(pctW);
+        colPct.setPrefWidth(pctW);
 
         table.getColumns().addAll(colNome, colTipo, colSaldo, colPct);
+
         table.getItems().addAll(invRepo.findAll());
 
         Label titleLbl = new Label("Ativos da Carteira");
@@ -517,5 +610,11 @@ public class DashboardPanel extends BorderPane {
                 c -> Platform.runLater(() -> usdLabel.setText("💰 USD: R$"
                         + FormatUtil.numero(c.getValorCompra(), 2) + "/" + FormatUtil.numero(c.getValorVenda(), 2))),
                 () -> usdLabel.setText("💰 USD: —"));
+    }
+
+    private static double colW(String header, double contentMin) {
+        javafx.scene.text.Text t = new javafx.scene.text.Text(header);
+        t.setFont(javafx.scene.text.Font.font("SansSerif", javafx.scene.text.FontWeight.BOLD, 11));
+        return Math.max(contentMin, Math.ceil(t.getBoundsInLocal().getWidth()) + 32);
     }
 }
