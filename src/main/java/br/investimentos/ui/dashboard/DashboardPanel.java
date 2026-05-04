@@ -6,6 +6,7 @@ import br.investimentos.model.enums.TipoInvestimento;
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
 import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.ui.util.GlossarioTooltip;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingNode;
 import javafx.geometry.Insets;
@@ -16,7 +17,6 @@ import javafx.scene.layout.*;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.general.DefaultPieDataset;
 
@@ -196,6 +196,7 @@ public class DashboardPanel extends BorderPane {
 
         Label sub = new Label(sublabel);
         sub.getStyleClass().add("card-label");
+        GlossarioTooltip.aplicar(sub, sublabel);
 
         card.getChildren().addAll(lbl, val, sub);
         return card;
@@ -236,6 +237,7 @@ public class DashboardPanel extends BorderPane {
 
         Label lbl = new Label(label);
         lbl.getStyleClass().add("card-title");
+        GlossarioTooltip.aplicar(lbl, label);
 
         Label val = new Label(pctValue);
         val.setStyle("-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
@@ -252,24 +254,110 @@ public class DashboardPanel extends BorderPane {
     private HBox buildCharts(ConsolidacaoService.ResultadoConsolidado r, double dolarTotal) {
         HBox hbox = new HBox(12);
 
+        java.awt.Color bgCard   = new java.awt.Color(0x16, 0x1b, 0x22);
+        java.awt.Color border   = new java.awt.Color(0x2a, 0x34, 0x41);
+        java.awt.Color textMut  = new java.awt.Color(0x7d, 0x8f, 0xa0);
+        java.awt.Color textMain = new java.awt.Color(0xe6, 0xed, 0xf3);
+        java.awt.Color green    = new java.awt.Color(0x3f, 0xb9, 0x50);
+        java.awt.Color red      = new java.awt.Color(0xf8, 0x51, 0x49);
+        java.awt.Color blue     = new java.awt.Color(0x58, 0xa6, 0xff);
+        java.awt.Color amber    = new java.awt.Color(0xe3, 0xb3, 0x41);
+        java.awt.Font  fontSm   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 11);
+        java.awt.Font  fontXs   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10);
+        java.awt.Font  fontBold = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+
+        // ── Pie chart ─────────────────────────────────────────────────
         DefaultPieDataset<String> pieData = new DefaultPieDataset<>();
         if (r.vtarf() > 0) pieData.setValue("Renda Fixa", r.vtarf());
         if (r.vtarv() > 0) pieData.setValue("Renda Variável", r.vtarv());
         if (dolarTotal > 0) pieData.setValue("Dólar", dolarTotal);
 
         JFreeChart pie = ChartFactory.createPieChart("Alocação", pieData, true, false, false);
-        pie.setBackgroundPaint(java.awt.Color.decode("#161b22"));
+        pie.setBackgroundPaint(bgCard);
+        pie.setBorderVisible(false);
+        pie.getTitle().setPaint(textMut);
+        pie.getTitle().setFont(fontBold);
+
+        org.jfree.chart.plot.PiePlot<?> piePlot = (org.jfree.chart.plot.PiePlot<?>) pie.getPlot();
+        piePlot.setBackgroundPaint(bgCard);
+        piePlot.setOutlinePaint(null);
+        piePlot.setShadowPaint(null);
+        piePlot.setSectionPaint("Renda Fixa", green);
+        piePlot.setSectionPaint("Renda Variável", blue);
+        piePlot.setSectionPaint("Dólar", amber);
+        piePlot.setLabelBackgroundPaint(new java.awt.Color(0x1c, 0x22, 0x30));
+        piePlot.setLabelOutlinePaint(border);
+        piePlot.setLabelShadowPaint(null);
+        piePlot.setLabelFont(fontXs);
+        piePlot.setLabelPaint(textMain);
+
+        org.jfree.chart.title.LegendTitle pieLegend = pie.getLegend();
+        if (pieLegend != null) {
+            pieLegend.setBackgroundPaint(bgCard);
+            pieLegend.setItemPaint(textMut);
+            pieLegend.setItemFont(fontSm);
+        }
+
         SwingNode pieNode = new SwingNode();
-        SwingUtilities.invokeLater(() -> pieNode.setContent(new ChartPanel(pie)));
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(pie);
+            cp.setBackground(bgCard);
+            pieNode.setContent(cp);
+        });
         StackPane pieWrapper = new StackPane(pieNode);
         pieWrapper.setPrefSize(340, 240);
 
-        DefaultCategoryDataset barData = buildMonthlyData();
-        JFreeChart bar = ChartFactory.createBarChart("Retorno Mensal", "Mês", "R$", barData,
-                PlotOrientation.VERTICAL, false, true, false);
-        bar.setBackgroundPaint(java.awt.Color.decode("#161b22"));
+        // ── Dot chart (retorno mensal) ─────────────────────────────────
+        DefaultCategoryDataset dotData = buildMonthlyData();
+
+        org.jfree.chart.axis.CategoryAxis xAxis = new org.jfree.chart.axis.CategoryAxis(null);
+        xAxis.setTickLabelPaint(textMut);
+        xAxis.setTickLabelFont(fontXs);
+        xAxis.setAxisLinePaint(border);
+        xAxis.setTickMarkPaint(border);
+
+        org.jfree.chart.axis.NumberAxis yAxis = new org.jfree.chart.axis.NumberAxis("R$");
+        yAxis.setTickLabelPaint(textMut);
+        yAxis.setTickLabelFont(fontXs);
+        yAxis.setAxisLinePaint(border);
+        yAxis.setTickMarkPaint(border);
+        yAxis.setLabelPaint(textMut);
+        yAxis.setLabelFont(fontSm);
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer dotRenderer =
+            new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
+                @Override
+                public java.awt.Paint getItemPaint(int row, int column) {
+                    Number val = dotData.getValue(row, column);
+                    return (val != null && val.doubleValue() >= 0) ? green : red;
+                }
+            };
+        dotRenderer.setDefaultLinesVisible(false);
+        dotRenderer.setDefaultShapesVisible(true);
+        dotRenderer.setDefaultShapesFilled(true);
+        dotRenderer.setDefaultShape(new java.awt.geom.Ellipse2D.Double(-5, -5, 10, 10));
+
+        org.jfree.chart.plot.CategoryPlot dotPlot = new org.jfree.chart.plot.CategoryPlot(
+                dotData, xAxis, yAxis, dotRenderer);
+        dotPlot.setBackgroundPaint(bgCard);
+        dotPlot.setOutlinePaint(border);
+        dotPlot.setRangeGridlinePaint(border);
+        dotPlot.setDomainGridlinesVisible(false);
+        dotPlot.setRangeZeroBaselinePaint(textMut);
+        dotPlot.setRangeZeroBaselineVisible(true);
+
+        JFreeChart dot = new JFreeChart("Retorno Mensal", fontBold, dotPlot, false);
+        dot.setBackgroundPaint(bgCard);
+        dot.setBorderVisible(false);
+        dot.getTitle().setPaint(textMut);
+        dot.getTitle().setFont(fontBold);
+
         SwingNode barNode = new SwingNode();
-        SwingUtilities.invokeLater(() -> barNode.setContent(new ChartPanel(bar)));
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(dot);
+            cp.setBackground(bgCard);
+            barNode.setContent(cp);
+        });
         StackPane barWrapper = new StackPane(barNode);
         barWrapper.setPrefSize(460, 240);
 
@@ -289,11 +377,8 @@ public class DashboardPanel extends BorderPane {
 
     private DefaultCategoryDataset buildMonthlyData() {
         DefaultCategoryDataset ds = new DefaultCategoryDataset();
-        LocalDate hoje = LocalDate.now();
-        for (int i = 5; i >= 0; i--) {
-            LocalDate d = hoje.minusMonths(i);
-            ConsolidacaoService.ResultadoConsolidado r = consolSvc.calcular(d.getYear());
-            ds.addValue(r.vtra() / 12.0, "Retorno", FormatUtil.mesAno(d.getMonthValue(), d.getYear()));
+        for (ConsolidacaoService.VtraMensal m : consolSvc.calcularVtraPorMes(anoSelecionado)) {
+            ds.addValue(m.vtra(), "Retorno", FormatUtil.mesAno(m.mes(), m.ano()));
         }
         return ds;
     }

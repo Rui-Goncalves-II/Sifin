@@ -186,6 +186,47 @@ public class ConsolidacaoService {
         return total;
     }
 
+    public record VtraMensal(int mes, int ano, double vtra) {}
+
+    /**
+     * Retorna VTRA real por mês, incluindo apenas meses com dados (RF com VTA ou RV com dividendo).
+     * Chave de ordenação: ano*100+mes para ordenação natural.
+     */
+    public List<VtraMensal> calcularVtraPorMes(int ano) {
+        boolean todos = (ano == ANO_TODOS);
+        java.util.TreeMap<Integer, Double> mapa = new java.util.TreeMap<>();
+
+        for (Investimento inv : invRepo.findByTipo(TipoInvestimento.RENDA_FIXA)) {
+            List<VtaMensal> vtas = todos
+                    ? vtaRepo.findByInvestimento(inv.getId())
+                    : vtaRepo.findByInvestimentoEAno(inv.getId(), ano);
+            for (VtaMensal vta : vtas) {
+                int chave = vta.getPeriodoAno() * 100 + vta.getPeriodoMes();
+                mapa.merge(chave, rendimentoService.calcularR(vta), Double::sum);
+            }
+        }
+
+        for (Investimento inv : invRepo.findByTipo(TipoInvestimento.RENDA_VARIAVEL)) {
+            var aportes = todos
+                    ? aporteRepo.findByInvestimento(inv.getId())
+                    : aporteRepo.findByInvestimentoEAno(inv.getId(), ano);
+            for (var a : aportes) {
+                if (a.getTipoOp() == TipoOperacaoRv.DIVIDENDO) {
+                    int chave = a.getPeriodoAno() * 100 + a.getPeriodoMes();
+                    mapa.merge(chave, a.getValor(), Double::sum);
+                }
+            }
+        }
+
+        List<VtraMensal> resultado = new ArrayList<>();
+        for (var e : mapa.entrySet()) {
+            if (e.getValue() != 0.0) {
+                resultado.add(new VtraMensal(e.getKey() % 100, e.getKey() / 100, e.getValue()));
+            }
+        }
+        return resultado;
+    }
+
     public List<Integer> anosComDados() {
         List<Integer> anos = new ArrayList<>();
         try (Connection c = br.investimentos.db.DatabaseManager.getInstance().getConnection()) {

@@ -1,9 +1,7 @@
 package br.investimentos.ui.rendafixa;
 
 import br.investimentos.model.Investimento;
-import br.investimentos.model.Movimentacao;
 import br.investimentos.model.VtaMensal;
-import br.investimentos.model.enums.TipoMovimentacao;
 import br.investimentos.repository.*;
 import br.investimentos.service.RendimentoService;
 import br.investimentos.ui.util.FormatUtil;
@@ -16,15 +14,22 @@ import java.time.LocalDate;
 
 public class VtaFormDialog extends Dialog<Void> {
 
+    /** Novo VTA (período padrão = mês atual). */
     public VtaFormDialog(Investimento inv, VtaMensalRepository vtaRepo,
-                         VaiAnualRepository vaiRepo, MovimentacaoRepository movRepo,
-                         RendimentoService rendSvc) {
-        setTitle("Informar VTA — " + inv.getNome());
+                         VaiAnualRepository vaiRepo, RendimentoService rendSvc) {
+        this(inv, vtaRepo, vaiRepo, rendSvc, null);
+    }
+
+    /** Editar VTA existente: período e valor pré-preenchidos de {@code preFill}. */
+    public VtaFormDialog(Investimento inv, VtaMensalRepository vtaRepo,
+                         VaiAnualRepository vaiRepo, RendimentoService rendSvc,
+                         VtaMensal preFill) {
+        setTitle((preFill != null ? "Editar" : "Informar") + " VTA — " + inv.getNome());
         initModality(Modality.APPLICATION_MODAL);
 
         LocalDate hoje = LocalDate.now();
-        int mesAtual = hoje.getMonthValue();
-        int anoAtual = hoje.getYear();
+        int mesDefault = preFill != null ? preFill.getPeriodoMes() : hoje.getMonthValue();
+        int anoDefault = preFill != null ? preFill.getPeriodoAno() : hoje.getYear();
 
         GridPane form = new GridPane();
         form.setHgap(12);
@@ -35,8 +40,8 @@ public class VtaFormDialog extends Dialog<Void> {
         // Período
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
-        fMes.setValue(mesAtual);
-        TextField fAno = new TextField(String.valueOf(anoAtual));
+        fMes.setValue(mesDefault);
+        TextField fAno = new TextField(String.valueOf(anoDefault));
         fAno.setPrefWidth(80);
         HBox periodoBox = new HBox(8, fMes, new Label("/ "), fAno);
         periodoBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
@@ -47,26 +52,26 @@ public class VtaFormDialog extends Dialog<Void> {
         fVta.setPromptText("Valor total atual do investimento");
         addRow(form, 1, "VTA (R$) *", fVta);
 
-        // Aporte adicional (DEPOSITO) neste mês
-        TextField fAporte = new TextField("0");
-        fAporte.setPromptText("Depósito realizado este mês (0 se nenhum)");
-        addRow(form, 2, "Depósito no Mês (R$)", fAporte);
-
         // VI preview
         Label viLabel = new Label("VI = R$ —");
         viLabel.getStyleClass().add("card-label");
         Label rLabel = new Label("R = R$ —");
         rLabel.getStyleClass().add("card-label");
-        form.add(new VBox(4, viLabel, rLabel), 1, 3);
-        form.add(new Label(""), 0, 3);
+        form.add(new VBox(4, viLabel, rLabel), 1, 2);
+        form.add(new Label(""), 0, 2);
 
-        // Preenche VTA existente
-        vtaRepo.find(inv.getId(), mesAtual, anoAtual).ifPresent(v -> fVta.setText(String.valueOf(v.getVta())));
+        // Pré-preencher valor
+        if (preFill != null) {
+            fVta.setText(String.valueOf(preFill.getVta()));
+        } else {
+            vtaRepo.find(inv.getId(), mesDefault, anoDefault)
+                    .ifPresent(v -> fVta.setText(String.valueOf(v.getVta())));
+        }
 
         // Preview ao digitar
         Runnable updatePreview = () -> {
             try {
-                int mes = fMes.getValue() != null ? fMes.getValue() : mesAtual;
+                int mes = fMes.getValue() != null ? fMes.getValue() : mesDefault;
                 int ano = Integer.parseInt(fAno.getText().strip());
                 double vi = rendSvc.calcularVi(inv.getId(), ano, mes);
                 viLabel.setText("VI = " + FormatUtil.brl(vi));
@@ -96,18 +101,6 @@ public class VtaFormDialog extends Dialog<Void> {
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
                 double vta = Double.parseDouble(fVta.getText().strip().replace(",", "."));
-                double aporte = Double.parseDouble(fAporte.getText().strip().replace(",", "."));
-
-                // Registra aporte se > 0
-                if (aporte > 0) {
-                    Movimentacao mov = new Movimentacao();
-                    mov.setInvestimentoId(inv.getId());
-                    mov.setPeriodoMes(mes);
-                    mov.setPeriodoAno(ano);
-                    mov.setTipoMov(TipoMovimentacao.DEPOSITO);
-                    mov.setValor(aporte);
-                    movRepo.salvar(mov);
-                }
 
                 VtaMensal vtaM = new VtaMensal();
                 vtaM.setInvestimentoId(inv.getId());

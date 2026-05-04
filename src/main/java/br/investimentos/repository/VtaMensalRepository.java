@@ -27,6 +27,14 @@ public class VtaMensalRepository {
         return v;
     }
 
+    public void deletar(int id) {
+        try (Connection c = db.getConnection();
+             PreparedStatement ps = c.prepareStatement("DELETE FROM vta_mensal WHERE id=?")) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        } catch (SQLException e) { throw new RuntimeException(e); }
+    }
+
     public Optional<VtaMensal> find(int investimentoId, int mes, int ano) {
         String sql = "SELECT * FROM vta_mensal WHERE investimento_id=? AND periodo_mes=? AND periodo_ano=?";
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {

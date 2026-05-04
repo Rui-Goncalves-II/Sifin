@@ -13,6 +13,7 @@ public final class FormatUtil {
     private FormatUtil() {}
 
     public static String brl(double value) {
+        if (!Double.isFinite(value)) return "—";
         return CURRENCY.format(BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP));
     }
 

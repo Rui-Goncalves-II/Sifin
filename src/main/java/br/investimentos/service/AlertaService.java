@@ -23,9 +23,9 @@ public class AlertaService {
     }
 
     public List<String> alertasPendentes() {
-        LocalDate hoje = LocalDate.now();
-        int mes = hoje.getMonthValue();
-        int ano = hoje.getYear();
+        LocalDate mesAnterior = LocalDate.now().minusMonths(1);
+        int mes = mesAnterior.getMonthValue();
+        int ano = mesAnterior.getYear();
         String periodo = String.format("%02d/%d", mes, ano);
 
         List<String> alertas = new ArrayList<>();

@@ -1,11 +1,14 @@
 package br.investimentos.ui.rendafixa;
 
 import br.investimentos.model.Investimento;
+import br.investimentos.model.Movimentacao;
 import br.investimentos.model.VtaMensal;
+import br.investimentos.model.enums.TipoMovimentacao;
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
 import br.investimentos.ui.projecao.ProjecaoPanel;
 import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.ui.util.GlossarioTooltip;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -56,7 +59,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
         Button btnVta = new Button("+ VTA");
         btnVta.getStyleClass().add("btn-primary");
         btnVta.setOnAction(e -> {
-            new VtaFormDialog(inv, vtaRepo, vaiRepo, movRepo, rendSvc).showAndWait();
+            new VtaFormDialog(inv, vtaRepo, vaiRepo, rendSvc).showAndWait();
             construir();
         });
         Button btnProjecao = new Button("📈 Projeção");
@@ -86,7 +89,10 @@ public class RendaFixaDetalhePanel extends BorderPane {
         double vai = vaiRepo.getVai(inv.getId(), ano);
         double sam = rendSvc.calcularSam(inv.getId(), ano, mes);
         double vi = vai + sam;
-        double r = rendSvc.calcularR(inv.getId(), mes, ano);
+        // R acumulado = R do último VTA registrado no ano (já inclui todos os meses anteriores)
+        double r = vtaRepo.findUltimoDoAno(inv.getId(), ano)
+                .map(rendSvc::calcularR)
+                .orElse(0.0);
 
         GridPane sumGrid = new GridPane();
         sumGrid.setHgap(12); sumGrid.setVgap(12);
@@ -119,11 +125,13 @@ public class RendaFixaDetalhePanel extends BorderPane {
                 FormatUtil.mesAno(c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
         cPer.setPrefWidth(100);
 
-        TableColumn<VtaMensal, String> cVta = new TableColumn<>("VTA");
+        TableColumn<VtaMensal, String> cVta = new TableColumn<>();
+        cVta.setGraphic(colHeader("VTA"));
         cVta.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(c.getValue().getVta())));
         cVta.setPrefWidth(130);
 
-        TableColumn<VtaMensal, String> cVi = new TableColumn<>("VI");
+        TableColumn<VtaMensal, String> cVi = new TableColumn<>();
+        cVi.setGraphic(colHeader("VI"));
         cVi.setCellValueFactory(c -> {
             VtaMensal v = c.getValue();
             double viVal = rendSvc.calcularVi(v.getInvestimentoId(), v.getPeriodoAno(), v.getPeriodoMes());
@@ -178,19 +186,149 @@ public class RendaFixaDetalhePanel extends BorderPane {
         });
         cTaxa.setPrefWidth(100);
 
-        vtaTable.getColumns().addAll(cPer, cVta, cVi, cR, cSomaPrev, cRMensal, cTaxa);
+        TableColumn<VtaMensal, Void> cAcoes = new TableColumn<>("Ações");
+        cAcoes.setPrefWidth(150);
+        cAcoes.setCellFactory(col -> new TableCell<>() {
+            private final Button btnEdit = new Button("✏ Editar");
+            private final Button btnDel  = new Button("🗑 Excluir");
+            {
+                btnEdit.getStyleClass().add("btn-secondary");
+                btnDel.getStyleClass().add("btn-danger");
+                btnEdit.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
+                btnDel.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
 
+                btnEdit.setOnAction(e -> {
+                    VtaMensal v = getTableView().getItems().get(getIndex());
+                    new VtaFormDialog(inv, vtaRepo, vaiRepo, rendSvc, v).showAndWait();
+                    construir();
+                });
+
+                btnDel.setOnAction(e -> {
+                    VtaMensal v = getTableView().getItems().get(getIndex());
+                    Alert conf = new Alert(Alert.AlertType.CONFIRMATION,
+                            "Excluir VTA de " + FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()) + "?",
+                            ButtonType.YES, ButtonType.NO);
+                    conf.setTitle("Confirmar exclusão");
+                    conf.showAndWait().ifPresent(bt -> {
+                        if (bt == ButtonType.YES) {
+                            vtaRepo.deletar(v.getId());
+                            construir();
+                        }
+                    });
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : new HBox(6, btnEdit, btnDel));
+            }
+        });
+
+        vtaTable.getColumns().addAll(cPer, cVta, cVi, cR, cSomaPrev, cRMensal, cTaxa, cAcoes);
         vtaTable.getItems().addAll(vtas);
 
-        content.getChildren().addAll(new VBox(4, info), sumGrid, histTitle, vtaTable);
+        // ── Movimentações ────────────────────────────────────────────────
+        Label movTitle = new Label("Movimentações (Depósitos e Saques)");
+        movTitle.getStyleClass().add("section-title");
+
+        Button btnNovaMov = new Button("+ Movimentação");
+        btnNovaMov.getStyleClass().add("btn-primary");
+        btnNovaMov.setStyle("-fx-font-size: 12px; -fx-padding: 5 14;");
+        btnNovaMov.setOnAction(e -> {
+            Movimentacao nova = new Movimentacao();
+            new MovimentacaoFormDialog(inv, nova, movRepo).showAndWait();
+            construir();
+        });
+        HBox movHeader = new HBox(12, movTitle, btnNovaMov);
+        movHeader.setAlignment(Pos.CENTER_LEFT);
+
+        TableView<Movimentacao> movTable = new TableView<>();
+        movTable.getStyleClass().add("table-view");
+        movTable.setPrefHeight(200);
+
+        TableColumn<Movimentacao, String> mPer = new TableColumn<>("Período");
+        mPer.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.mesAno(c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
+        mPer.setPrefWidth(100);
+
+        TableColumn<Movimentacao, String> mTipo = new TableColumn<>("Tipo");
+        mTipo.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getTipoMov() == TipoMovimentacao.DEPOSITO ? "Depósito" : "Saque"));
+        mTipo.setPrefWidth(100);
+
+        TableColumn<Movimentacao, String> mValor = new TableColumn<>("Valor");
+        mValor.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(c.getValue().getValor())));
+        mValor.setPrefWidth(130);
+
+        TableColumn<Movimentacao, String> mNotas = new TableColumn<>("Notas");
+        mNotas.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getNotas() != null ? c.getValue().getNotas() : ""));
+        mNotas.setPrefWidth(200);
+
+        TableColumn<Movimentacao, Void> mAcoes = new TableColumn<>("Ações");
+        mAcoes.setPrefWidth(150);
+        mAcoes.setCellFactory(col -> new TableCell<>() {
+            private final Button btnEdit = new Button("✏ Editar");
+            private final Button btnDel  = new Button("🗑 Excluir");
+            {
+                btnEdit.getStyleClass().add("btn-secondary");
+                btnDel.getStyleClass().add("btn-danger");
+                btnEdit.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
+                btnDel.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
+
+                btnEdit.setOnAction(e -> {
+                    Movimentacao m = getTableView().getItems().get(getIndex());
+                    new MovimentacaoFormDialog(inv, m, movRepo).showAndWait();
+                    construir();
+                });
+
+                btnDel.setOnAction(e -> {
+                    Movimentacao m = getTableView().getItems().get(getIndex());
+                    Alert conf = new Alert(Alert.AlertType.CONFIRMATION,
+                            "Excluir movimentação de " + FormatUtil.brl(m.getValor()) + "?",
+                            ButtonType.YES, ButtonType.NO);
+                    conf.setTitle("Confirmar exclusão");
+                    conf.showAndWait().ifPresent(bt -> {
+                        if (bt == ButtonType.YES) {
+                            movRepo.deletar(m.getId());
+                            construir();
+                        }
+                    });
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : new HBox(6, btnEdit, btnDel));
+            }
+        });
+
+        movTable.getColumns().addAll(mPer, mTipo, mValor, mNotas, mAcoes);
+        movTable.getItems().addAll(movRepo.findByInvestimento(inv.getId()));
+
+        content.getChildren().addAll(new VBox(4, info), sumGrid, histTitle, vtaTable,
+                movHeader, movTable);
         return content;
+    }
+
+    private Label colHeader(String sigla) {
+        Label lbl = new Label(sigla);
+        lbl.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 11px; -fx-font-weight: bold;");
+        GlossarioTooltip.aplicar(lbl, sigla);
+        return lbl;
     }
 
     private VBox metricCard(String title, String value, String valueStyle) {
         VBox card = new VBox(4);
         card.getStyleClass().add("card");
-        Label t = new Label(title); t.getStyleClass().add("card-title");
-        Label v = new Label(value); v.getStyleClass().addAll("card-value-sm", valueStyle);
+        Label t = new Label(title);
+        t.getStyleClass().add("card-title");
+        GlossarioTooltip.aplicar(t, title);
+        Label v = new Label(value);
+        v.getStyleClass().addAll("card-value-sm", valueStyle);
         card.getChildren().addAll(t, v);
         return card;
     }

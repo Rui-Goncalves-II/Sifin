@@ -6,6 +6,7 @@ import br.investimentos.model.enums.TipoOperacaoRv;
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
 import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.ui.util.GlossarioTooltip;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -131,9 +132,13 @@ public class RendaVariavelDetalhePanel extends BorderPane {
     }
 
     private VBox metricCard(String title, String value, String valueStyle) {
-        VBox card = new VBox(4); card.getStyleClass().add("card");
-        Label t = new Label(title); t.getStyleClass().add("card-title");
-        Label v = new Label(value); v.getStyleClass().addAll("card-value-sm", valueStyle);
+        VBox card = new VBox(4);
+        card.getStyleClass().add("card");
+        Label t = new Label(title);
+        t.getStyleClass().add("card-title");
+        GlossarioTooltip.aplicar(t, title);
+        Label v = new Label(value);
+        v.getStyleClass().addAll("card-value-sm", valueStyle);
         card.getChildren().addAll(t, v);
         return card;
     }

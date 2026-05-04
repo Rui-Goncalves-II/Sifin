@@ -54,7 +54,6 @@ public class RendaFixaListPanel extends BorderPane {
         // Table
         table = new TableView<>();
         table.getStyleClass().add("table-view");
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         TableColumn<Investimento, String> colNome = col("Nome", 220);
         colNome.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getNome()));
@@ -99,7 +98,7 @@ public class RendaFixaListPanel extends BorderPane {
                         getTableView().getItems().get(getIndex()), invRepo, movRepo, vtaRepo,
                         vaiRepo, rendSvc, taxaSvc, saldoSvc, navigate)));
                 btnVta.setOnAction(e -> {
-                    new VtaFormDialog(getTableView().getItems().get(getIndex()), vtaRepo, vaiRepo, movRepo, rendSvc).showAndWait();
+                    new VtaFormDialog(getTableView().getItems().get(getIndex()), vtaRepo, vaiRepo, rendSvc).showAndWait();
                     refresh();
                 });
                 btnEdit.setOnAction(e -> abrirForm(getTableView().getItems().get(getIndex())));
