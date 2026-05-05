@@ -98,7 +98,7 @@ public class RendaFixaListPanel extends BorderPane {
             {
                 btnVer.getStyleClass().add("btn-icon");
                 btnVta.getStyleClass().addAll("btn-secondary");
-                btnVta.setStyle("-fx-padding: 4 8; -fx-font-size: 11px;");
+                btnVta.setStyle("-fx-padding: 4 8; -fx-font-size: 15px;");
                 btnEdit.getStyleClass().add("btn-icon");
                 btnVer.setOnAction(e -> navigate.accept(new RendaFixaDetalhePanel(
                         getTableView().getItems().get(getIndex()), invRepo, movRepo, vtaRepo,

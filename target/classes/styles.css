@@ -1,7 +1,7 @@
 /* ── Base ─────────────────────────────────────────────────────────── */
 .root {
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    -fx-font-size: 13px;
+    -fx-font-size: 17px;
     -fx-background-color: #0d1117;
     /* design tokens */
     app-bg: #0d1117;
@@ -30,7 +30,7 @@
 .nav-logo {
     -fx-background-color: #3fb950;
     -fx-text-fill: #0d1117;
-    -fx-font-size: 15px;
+    -fx-font-size: 19px;
     -fx-font-weight: bold;
     -fx-background-radius: 10px;
     -fx-min-width: 36px;
@@ -44,7 +44,7 @@
 .nav-item {
     -fx-background-color: transparent;
     -fx-text-fill: #adbac7;
-    -fx-font-size: 18px;
+    -fx-font-size: 22px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
     -fx-padding: 0;
@@ -91,22 +91,22 @@
     -fx-padding: 16;
 }
 .card-title {
-    -fx-font-size: 11px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
     -fx-text-fill: #7d8fa0;
     -fx-padding: 0 0 6 0;
 }
 .card-value {
-    -fx-font-size: 24px;
+    -fx-font-size: 28px;
     -fx-font-weight: bold;
     -fx-text-fill: #e6edf3;
 }
 .card-value-sm {
-    -fx-font-size: 16px;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
     -fx-text-fill: #e6edf3;
 }
-.card-label { -fx-text-fill: #7d8fa0; -fx-font-size: 12px; }
+.card-label { -fx-text-fill: #7d8fa0; -fx-font-size: 16px; }
 
 /* ── KPI Cards ────────────────────────────────────────────────────── */
 .kpi-card {
@@ -118,12 +118,12 @@
     -fx-padding: 18 20;
 }
 .kpi-label {
-    -fx-font-size: 11px;
+    -fx-font-size: 15px;
     -fx-text-fill: #7d8fa0;
     -fx-font-weight: bold;
 }
 .kpi-value {
-    -fx-font-size: 22px;
+    -fx-font-size: 26px;
     -fx-font-weight: bold;
     -fx-text-fill: #e6edf3;
 }
@@ -133,20 +133,20 @@
 
 /* ── Headings ─────────────────────────────────────────────────────── */
 .page-title {
-    -fx-font-size: 20px;
+    -fx-font-size: 24px;
     -fx-font-weight: bold;
     -fx-text-fill: #e6edf3;
 }
 .section-title {
-    -fx-font-size: 13px;
+    -fx-font-size: 17px;
     -fx-font-weight: bold;
     -fx-text-fill: #7d8fa0;
 }
 
 /* ── Badges ───────────────────────────────────────────────────────── */
-.badge-rf  { -fx-background-color: #1a2d1a; -fx-text-fill: #3fb950; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 11px; }
-.badge-rv  { -fx-background-color: #1c2c40; -fx-text-fill: #58a6ff; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 11px; }
-.badge-usd { -fx-background-color: #2d2510; -fx-text-fill: #e3b341; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 11px; }
+.badge-rf  { -fx-background-color: #1a2d1a; -fx-text-fill: #3fb950; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 15px; }
+.badge-rv  { -fx-background-color: #1c2c40; -fx-text-fill: #58a6ff; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 15px; }
+.badge-usd { -fx-background-color: #2d2510; -fx-text-fill: #e3b341; -fx-background-radius: 4px; -fx-padding: 2 8; -fx-font-size: 15px; }
 
 /* ── Valores positivo/negativo ────────────────────────────────────── */
 .positive { -fx-text-fill: #3fb950; }
@@ -169,7 +169,7 @@
     -fx-background-radius: 6px;
     -fx-padding: 4 12;
     -fx-cursor: hand;
-    -fx-font-size: 12px;
+    -fx-font-size: 16px;
 }
 .year-btn:hover { -fx-background-color: #1c2230; -fx-text-fill: #e6edf3; }
 .year-btn.active {
@@ -189,7 +189,7 @@
     -fx-background-radius: 20px;
     -fx-padding: 4 16;
     -fx-cursor: hand;
-    -fx-font-size: 12px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
 .pill-btn:hover { -fx-background-color: #1c2230; -fx-text-fill: #e6edf3; }
@@ -206,7 +206,7 @@
     -fx-background-radius: 6px;
     -fx-padding: 4 10;
     -fx-text-fill: #e3b341;
-    -fx-font-size: 12px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
 
@@ -252,7 +252,7 @@
     -fx-border-color: transparent transparent #2a3441 transparent;
 }
 .table-view .column-header { -fx-background-color: transparent; -fx-padding: 8 12; }
-.table-view .column-header .label { -fx-text-fill: #7d8fa0; -fx-font-size: 11px; -fx-font-weight: bold; }
+.table-view .column-header .label { -fx-text-fill: #7d8fa0; -fx-font-size: 15px; -fx-font-weight: bold; }
 .table-row-cell { -fx-cell-size: 40px; -fx-background-color: #161b22; }
 .table-row-cell:odd  { -fx-background-color: #161b22; }
 .table-row-cell:even { -fx-background-color: #131820; }
@@ -300,14 +300,14 @@
     -fx-background-radius: 4px;
     -fx-padding: 4 8;
     -fx-cursor: hand;
-    -fx-font-size: 14px;
+    -fx-font-size: 18px;
 }
 .btn-icon:hover { -fx-background-color: #1c2230; -fx-text-fill: #e6edf3; }
 
 /* ── Forms ────────────────────────────────────────────────────────── */
 .form-label {
     -fx-text-fill: #7d8fa0;
-    -fx-font-size: 12px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
 .text-field, .combo-box, .text-area, .date-picker {
@@ -333,7 +333,7 @@
     -fx-border-color: #e3b341;
     -fx-border-width: 0 0 0 3px;
     -fx-padding: 8 16;
-    -fx-font-size: 12px;
+    -fx-font-size: 16px;
     -fx-text-fill: #e3b341;
     -fx-background-radius: 0 6px 6px 0;
 }
@@ -345,7 +345,7 @@
     -fx-border-width: 0 0 0 4px;
     -fx-padding: 10 16;
     -fx-background-radius: 0 6px 6px 0;
-    -fx-font-size: 13px;
+    -fx-font-size: 17px;
     -fx-text-fill: #3fb950;
     -fx-font-weight: bold;
 }
@@ -355,7 +355,7 @@
     -fx-border-width: 0 0 0 4px;
     -fx-padding: 10 16;
     -fx-background-radius: 0 6px 6px 0;
-    -fx-font-size: 13px;
+    -fx-font-size: 17px;
     -fx-text-fill: #f85149;
     -fx-font-weight: bold;
 }
@@ -373,7 +373,7 @@
 }
 .dialog-header-title {
     -fx-text-fill: #e6edf3;
-    -fx-font-size: 16px;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
 }
 .dialog-body { -fx-padding: 20 24; }

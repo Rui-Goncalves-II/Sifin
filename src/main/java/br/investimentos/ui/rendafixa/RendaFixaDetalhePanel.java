@@ -118,6 +118,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
 
         TableView<VtaMensal> vtaTable = new TableView<>();
         vtaTable.getStyleClass().add("table-view");
+        vtaTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         vtaTable.setPrefHeight(300);
 
         TableColumn<VtaMensal, String> cPer = new TableColumn<>("Período");
@@ -194,8 +195,8 @@ public class RendaFixaDetalhePanel extends BorderPane {
             {
                 btnEdit.getStyleClass().add("btn-secondary");
                 btnDel.getStyleClass().add("btn-danger");
-                btnEdit.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
-                btnDel.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
+                btnEdit.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
+                btnDel.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
 
                 btnEdit.setOnAction(e -> {
                     VtaMensal v = getTableView().getItems().get(getIndex());
@@ -234,7 +235,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
 
         Button btnNovaMov = new Button("+ Movimentação");
         btnNovaMov.getStyleClass().add("btn-primary");
-        btnNovaMov.setStyle("-fx-font-size: 12px; -fx-padding: 5 14;");
+        btnNovaMov.setStyle("-fx-font-size: 16px; -fx-padding: 5 14;");
         btnNovaMov.setOnAction(e -> {
             Movimentacao nova = new Movimentacao();
             new MovimentacaoFormDialog(inv, nova, movRepo).showAndWait();
@@ -245,6 +246,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
 
         TableView<Movimentacao> movTable = new TableView<>();
         movTable.getStyleClass().add("table-view");
+        movTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         movTable.setPrefHeight(200);
 
         TableColumn<Movimentacao, String> mPer = new TableColumn<>("Período");
@@ -275,8 +277,8 @@ public class RendaFixaDetalhePanel extends BorderPane {
             {
                 btnEdit.getStyleClass().add("btn-secondary");
                 btnDel.getStyleClass().add("btn-danger");
-                btnEdit.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
-                btnDel.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
+                btnEdit.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
+                btnDel.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
 
                 btnEdit.setOnAction(e -> {
                     Movimentacao m = getTableView().getItems().get(getIndex());
@@ -316,7 +318,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
 
     private Label colHeader(String sigla) {
         Label lbl = new Label(sigla);
-        lbl.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 11px; -fx-font-weight: bold;");
+        lbl.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 15px; -fx-font-weight: bold;");
         GlossarioTooltip.aplicar(lbl, sigla);
         return lbl;
     }

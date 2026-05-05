@@ -44,6 +44,9 @@ public final class GlossarioTooltip {
         SIGLAS.put("VAC",   "VAC — Valor Atual por Cota\nCotação atual do ativo (API ou informada manualmente)");
         SIGLAS.put("PTG",   "PTG — Patrimônio Total com Ganhos\n= (VAC × QC) + Dividendos");
         SIGLAS.put("LEB",   "LEB — Lucro/Prejuízo Estimado Bruto\n= (VAC × QC) − VTP");
+        SIGLAS.put("LEB %", "LEB % — Rentabilidade Bruta\n= (LEB / VTP) × 100");
+        SIGLAS.put("LEA",   "LEA — Lucro/Prejuízo Estimado Acumulado\n= LEB + Dividendos");
+        SIGLAS.put("LEA %", "LEA % — Rentabilidade Acumulada com Dividendos\n= (LEA / VTP) × 100");
         SIGLAS.put("D",     "D — Dividendos\n= Σ valores de todos os dividendos recebidos");
     }
 
@@ -76,7 +79,7 @@ public final class GlossarioTooltip {
                         "-fx-border-color: #2a3441;" +
                         "-fx-border-width: 1px;" +
                         "-fx-text-fill: #e6edf3;" +
-                        "-fx-font-size: 12px;" +
+                        "-fx-font-size: 16px;" +
                         "-fx-padding: 8 12;"
                 );
                 Tooltip.install(node, tip);

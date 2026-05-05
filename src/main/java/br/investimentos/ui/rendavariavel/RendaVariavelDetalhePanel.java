@@ -79,12 +79,18 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         grid.add(metricCard("LEB", FormatUtil.brl(pos.leb()), pos.leb() >= 0 ? "positive" : "negative"), 0, 1);
         grid.add(metricCard("LEB %", FormatUtil.pct(pos.lebPct()), pos.lebPct() >= 0 ? "positive" : "negative"), 1, 1);
 
+        double lea = pos.leb() + pos.d();
+        double leaPct = pos.vtp() > 0 ? (lea / pos.vtp()) * 100 : 0;
+        grid.add(metricCard("LEA", FormatUtil.brl(lea), lea >= 0 ? "positive" : "negative"), 2, 1);
+        grid.add(metricCard("LEA %", FormatUtil.pct(leaPct), leaPct >= 0 ? "positive" : "negative"), 3, 1);
+
         // Operações table
         Label opTitle = new Label("Operações");
         opTitle.getStyleClass().add("section-title");
 
         TableView<AporteRv> opTable = new TableView<>();
         opTable.getStyleClass().add("table-view");
+        opTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         opTable.setPrefHeight(300);
 
         TableColumn<AporteRv, String> cPer = new TableColumn<>("Período");

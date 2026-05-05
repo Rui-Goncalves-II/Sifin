@@ -12,16 +12,16 @@ public class Toast {
 
     public static void show(StackPane overlay, String titulo, String mensagem) {
         Label titleLbl = new Label(titulo);
-        titleLbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 13px; -fx-font-weight: bold;");
+        titleLbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 17px; -fx-font-weight: bold;");
 
         Label msgLbl = new Label(mensagem);
-        msgLbl.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 12px;");
+        msgLbl.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 16px;");
         msgLbl.setWrapText(true);
 
         Button closeBtn = new Button("✕");
         closeBtn.setStyle(
             "-fx-background-color: transparent; -fx-text-fill: #7d8fa0; " +
-            "-fx-font-size: 11px; -fx-padding: 0 2 0 8; -fx-cursor: hand;");
+            "-fx-font-size: 15px; -fx-padding: 0 2 0 8; -fx-cursor: hand;");
 
         Region gap = new Region();
         HBox.setHgrow(gap, Priority.ALWAYS);

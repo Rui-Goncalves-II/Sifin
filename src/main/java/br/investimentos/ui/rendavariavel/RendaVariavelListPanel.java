@@ -107,7 +107,7 @@ public class RendaVariavelListPanel extends BorderPane {
             {
                 btnVer.getStyleClass().add("btn-icon");
                 btnOp.getStyleClass().add("btn-secondary");
-                btnOp.setStyle("-fx-padding: 4 8; -fx-font-size: 11px;");
+                btnOp.setStyle("-fx-padding: 4 8; -fx-font-size: 15px;");
                 btnVer.setOnAction(e -> navigate.accept(new RendaVariavelDetalhePanel(
                         getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, navigate)));
                 btnOp.setOnAction(e -> {

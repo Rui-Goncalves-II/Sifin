@@ -22,8 +22,11 @@ import org.jfree.data.general.DefaultPieDataset;
 
 import javax.swing.*;
 import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class DashboardPanel extends BorderPane {
 
@@ -45,6 +48,7 @@ public class DashboardPanel extends BorderPane {
     private VBox alertBox;
     private VBox contentBox;
     private int anoSelecionado;
+    private final Set<TipoInvestimento> tiposFiltro = EnumSet.allOf(TipoInvestimento.class);
 
     public DashboardPanel(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
                           AporteRvRepository aporteRepo, VtaMensalRepository vtaRepo,
@@ -124,12 +128,12 @@ public class DashboardPanel extends BorderPane {
     }
 
     private void refresh() {
-        ConsolidacaoService.ResultadoConsolidado r = consolSvc.calcular(anoSelecionado);
+        ConsolidacaoService.ResultadoConsolidado r = consolSvc.calcular(anoSelecionado, tiposFiltro);
         double dolarBrl = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
-        double dolarTotal = calcDolarTotal(dolarBrl);
+        double dolarTotal = tiposFiltro.contains(TipoInvestimento.DOLAR) ? calcDolarTotal(dolarBrl) : 0.0;
         double ptaTotal = r.pta() + dolarTotal;
         LocalDate hoje = LocalDate.now();
-        double aporteMes = consolSvc.calcularAportesDoMes(hoje.getMonthValue(), hoje.getYear());
+        double aporteMes = consolSvc.calcularAportesDoMes(hoje.getMonthValue(), hoje.getYear(), tiposFiltro);
 
         contentBox.getChildren().clear();
 
@@ -142,28 +146,43 @@ public class DashboardPanel extends BorderPane {
         if (!rendRow.getChildren().isEmpty()) contentBox.getChildren().add(rendRow);
 
         contentBox.getChildren().add(buildCharts(r, dolarTotal));
+        contentBox.getChildren().add(buildPatrimonioChart(dolarBrl));
         contentBox.getChildren().add(buildMiniTypeCards(r, dolarTotal));
+        contentBox.getChildren().add(buildExtratoTable(dolarBrl));
         contentBox.getChildren().add(buildAssetsCard(ptaTotal));
     }
 
-    // ── Pills bar (display-only totals per type) ────────────────────────
+    // ── Pills bar (filter toggles per type) ─────────────────────────────
 
     private HBox buildPillsBar(ConsolidacaoService.ResultadoConsolidado r, double dolarTotal) {
         HBox bar = new HBox(8);
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.setPadding(new Insets(0, 0, 4, 0));
 
-        Label rfPill = new Label("🏦  Renda Fixa   " + FormatUtil.brlAbrev(r.vtarf()));
-        rfPill.getStyleClass().addAll("pill-btn", "pill-rf", "active");
-
-        Label rvPill = new Label("💹  Renda Variável   " + FormatUtil.brlAbrev(r.vtarv()));
-        rvPill.getStyleClass().addAll("pill-btn", "pill-rv", "active");
-
-        Label usdPill = new Label("💵  Dólar   " + FormatUtil.brlAbrev(dolarTotal));
-        usdPill.getStyleClass().addAll("pill-btn", "pill-usd", "active");
-
-        bar.getChildren().addAll(rfPill, rvPill, usdPill);
+        bar.getChildren().addAll(
+            makePillToggle("🏦  Renda Fixa   " + FormatUtil.brlAbrev(r.vtarf()),
+                    "pill-rf", TipoInvestimento.RENDA_FIXA),
+            makePillToggle("💹  Renda Variável   " + FormatUtil.brlAbrev(r.vtarv()),
+                    "pill-rv", TipoInvestimento.RENDA_VARIAVEL),
+            makePillToggle("💵  Dólar   " + FormatUtil.brlAbrev(dolarTotal),
+                    "pill-usd", TipoInvestimento.DOLAR)
+        );
         return bar;
+    }
+
+    private Button makePillToggle(String text, String colorClass, TipoInvestimento tipo) {
+        Button btn = new Button(text);
+        btn.getStyleClass().addAll("pill-btn", colorClass);
+        if (tiposFiltro.contains(tipo)) btn.getStyleClass().add("active");
+        btn.setOnAction(e -> {
+            if (tiposFiltro.contains(tipo)) {
+                if (tiposFiltro.size() > 1) tiposFiltro.remove(tipo);
+            } else {
+                tiposFiltro.add(tipo);
+            }
+            refresh();
+        });
+        return btn;
     }
 
     // ── 4 KPI cards ─────────────────────────────────────────────────────
@@ -247,7 +266,7 @@ public class DashboardPanel extends BorderPane {
         GlossarioTooltip.aplicar(lbl, label);
 
         Label val = new Label(pctValue);
-        val.setStyle("-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
+        val.setStyle("-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
 
         Label sub = new Label(subtext);
         sub.getStyleClass().add("card-label");
@@ -451,7 +470,7 @@ public class DashboardPanel extends BorderPane {
 
     private DefaultCategoryDataset buildMonthlyData() {
         DefaultCategoryDataset ds = new DefaultCategoryDataset();
-        for (ConsolidacaoService.VtraMensal m : consolSvc.calcularVtraPorMes(anoSelecionado)) {
+        for (ConsolidacaoService.VtraMensal m : consolSvc.calcularVtraPorMes(anoSelecionado, tiposFiltro)) {
             ds.addValue(m.vtra(), "Rendimento", FormatUtil.mesAno(m.mes(), m.ano()));
         }
         return ds;
@@ -460,7 +479,7 @@ public class DashboardPanel extends BorderPane {
     private DefaultCategoryDataset buildAccumulatedData() {
         DefaultCategoryDataset ds = new DefaultCategoryDataset();
         double acumulado = 0;
-        for (ConsolidacaoService.VtraMensal m : consolSvc.calcularVtraPorMes(anoSelecionado)) {
+        for (ConsolidacaoService.VtraMensal m : consolSvc.calcularVtraPorMes(anoSelecionado, tiposFiltro)) {
             acumulado += m.vtra();
             ds.addValue(acumulado, "Acumulado", FormatUtil.mesAno(m.mes(), m.ano()));
         }
@@ -472,18 +491,30 @@ public class DashboardPanel extends BorderPane {
     private HBox buildMiniTypeCards(ConsolidacaoService.ResultadoConsolidado r, double dolarTotal) {
         HBox row = new HBox(12);
 
-        VBox rfCard = makeMiniCard("🏦", "Renda Fixa", FormatUtil.brl(r.vtarf()),
-                "Rendimentos: " + FormatUtil.brl(r.rarf()), "badge-rf");
-        VBox rvCard = makeMiniCard("💹", "Renda Variável", FormatUtil.brl(r.vtarv()),
-                "Dividendos: " + FormatUtil.brl(r.dta()), "badge-rv");
-        VBox usdCard = makeMiniCard("💵", "Dólar", FormatUtil.brl(dolarTotal),
-                "Valor em reais pela cotação atual", "badge-usd");
-
-        for (VBox card : new VBox[]{rfCard, rvCard, usdCard}) {
+        if (tiposFiltro.contains(TipoInvestimento.RENDA_FIXA)) {
+            VBox card = makeMiniCard("🏦", "Renda Fixa", FormatUtil.brl(r.vtarf()),
+                    "Rendimentos: " + FormatUtil.brl(r.rarf()), "badge-rf");
             card.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(card, Priority.ALWAYS);
+            row.getChildren().add(card);
         }
-        row.getChildren().addAll(rfCard, rvCard, usdCard);
+
+        if (tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL)) {
+            VBox card = makeMiniCard("💹", "Renda Variável", FormatUtil.brl(r.vtarv()),
+                    "Dividendos: " + FormatUtil.brl(r.dta()), "badge-rv");
+            card.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(card, Priority.ALWAYS);
+            row.getChildren().add(card);
+        }
+
+        if (tiposFiltro.contains(TipoInvestimento.DOLAR)) {
+            VBox card = makeMiniCard("💵", "Dólar", FormatUtil.brl(dolarTotal),
+                    "Valor em reais pela cotação atual", "badge-usd");
+            card.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(card, Priority.ALWAYS);
+            row.getChildren().add(card);
+        }
+
         return row;
     }
 
@@ -494,7 +525,7 @@ public class DashboardPanel extends BorderPane {
         HBox hdr = new HBox(8);
         hdr.setAlignment(Pos.CENTER_LEFT);
         Label iconLbl = new Label(icon);
-        iconLbl.setStyle("-fx-font-size: 16px;");
+        iconLbl.setStyle("-fx-font-size: 20px;");
         Label typeLbl = new Label(label);
         typeLbl.getStyleClass().add(badgeStyle);
         hdr.getChildren().addAll(iconLbl, typeLbl);
@@ -559,12 +590,153 @@ public class DashboardPanel extends BorderPane {
 
         table.getColumns().addAll(colNome, colTipo, colSaldo, colPct);
 
-        table.getItems().addAll(invRepo.findAll());
+        table.getItems().addAll(invRepo.findAll().stream()
+                .filter(inv -> tiposFiltro.contains(inv.getTipo()))
+                .collect(Collectors.toList()));
 
         Label titleLbl = new Label("Ativos da Carteira");
         titleLbl.getStyleClass().add("section-title");
         VBox box = new VBox(8, titleLbl, table);
         box.getStyleClass().add("card");
+        return box;
+    }
+
+    // ── Histórico mensal (tabela) ────────────────────────────────────────
+
+    private VBox buildExtratoTable(double dolarBrl) {
+        List<ConsolidacaoService.ExtratoMensal> dados =
+                consolSvc.calcularExtratoPorMes(anoSelecionado, tiposFiltro, dolarBrl);
+
+        TableView<ConsolidacaoService.ExtratoMensal> table = new TableView<>();
+        table.getStyleClass().add("table-view");
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setPlaceholder(new Label("Sem dados para o período selecionado"));
+
+        TableColumn<ConsolidacaoService.ExtratoMensal, String> colData = new TableColumn<>("Data");
+        colData.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.mesAno(c.getValue().mes(), c.getValue().ano())));
+        colData.setMinWidth(colW("Data", 90));
+        colData.setPrefWidth(100);
+
+        TableColumn<ConsolidacaoService.ExtratoMensal, String> colAplicado = new TableColumn<>("Valor Aplicado");
+        colAplicado.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(c.getValue().valorAplicado())));
+        colAplicado.setMinWidth(colW("Valor Aplicado", 130));
+
+        TableColumn<ConsolidacaoService.ExtratoMensal, String> colRend = new TableColumn<>("Rendimentos");
+        colRend.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(c.getValue().valorRendimento())));
+        colRend.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setStyle(""); return; }
+                setText(item);
+                int idx = getIndex();
+                if (idx >= 0 && idx < getTableView().getItems().size()) {
+                    double v = getTableView().getItems().get(idx).valorRendimento();
+                    setStyle("-fx-text-fill: " + (v >= 0 ? "#3fb950" : "#f85149") + ";");
+                }
+            }
+        });
+        colRend.setMinWidth(colW("Rendimentos", 130));
+
+        TableColumn<ConsolidacaoService.ExtratoMensal, String> colTotal = new TableColumn<>("Valor Total");
+        colTotal.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(c.getValue().valorTotal())));
+        colTotal.setMinWidth(colW("Valor Total", 130));
+
+        table.getColumns().addAll(colData, colAplicado, colRend, colTotal);
+        table.getItems().addAll(dados);
+
+        int rowH = 32, headerH = 30;
+        if (anoSelecionado == ConsolidacaoService.ANO_TODOS) {
+            table.setPrefHeight(10 * rowH + headerH);
+        } else {
+            table.setPrefHeight(12 * rowH + headerH);
+            table.setMinHeight(12 * rowH + headerH);
+        }
+
+        Label titleLbl = new Label("Histórico Mensal");
+        titleLbl.getStyleClass().add("section-title");
+        VBox box = new VBox(8, titleLbl, table);
+        box.getStyleClass().add("card");
+        return box;
+    }
+
+    // ── Patrimônio por mês (scatter/linha) ──────────────────────────────
+
+    private VBox buildPatrimonioChart(double dolarBrl) {
+        java.awt.Color bgCard   = new java.awt.Color(0x16, 0x1b, 0x22);
+        java.awt.Color border   = new java.awt.Color(0x2a, 0x34, 0x41);
+        java.awt.Color textMut  = new java.awt.Color(0x7d, 0x8f, 0xa0);
+        java.awt.Color purple   = new java.awt.Color(0xbc, 0x8c, 0xff);
+        java.awt.Font  fontSm   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 11);
+        java.awt.Font  fontXs   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10);
+        java.awt.Font  fontBold = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+        java.awt.BasicStroke lineStroke = new java.awt.BasicStroke(
+                1.5f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND);
+        java.awt.geom.Ellipse2D.Double dotShape = new java.awt.geom.Ellipse2D.Double(-6, -6, 12, 12);
+
+        DefaultCategoryDataset ds = new DefaultCategoryDataset();
+        for (ConsolidacaoService.PatrimonioMensal p :
+                consolSvc.calcularPtaPorMes(anoSelecionado, tiposFiltro, dolarBrl)) {
+            ds.addValue(p.pta(), "Patrimônio", FormatUtil.mesAno(p.mes(), p.ano()));
+        }
+
+        org.jfree.chart.axis.CategoryAxis xAxis = new org.jfree.chart.axis.CategoryAxis(null);
+        xAxis.setTickLabelPaint(textMut);
+        xAxis.setTickLabelFont(fontXs);
+        xAxis.setAxisLinePaint(border);
+        xAxis.setTickMarkPaint(border);
+
+        org.jfree.chart.axis.NumberAxis yAxis = new org.jfree.chart.axis.NumberAxis("R$");
+        yAxis.setTickLabelPaint(textMut);
+        yAxis.setTickLabelFont(fontXs);
+        yAxis.setAxisLinePaint(border);
+        yAxis.setTickMarkPaint(border);
+        yAxis.setLabelPaint(textMut);
+        yAxis.setLabelFont(fontSm);
+        yAxis.setAutoRangeIncludesZero(false);
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer renderer =
+            new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
+                @Override public java.awt.Paint getItemPaint(int row, int col) { return purple; }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) { return purple; }
+            };
+        renderer.setDefaultLinesVisible(true);
+        renderer.setDefaultShapesVisible(true);
+        renderer.setDefaultShapesFilled(true);
+        renderer.setUseFillPaint(true);
+        renderer.setDefaultShape(dotShape);
+        renderer.setDefaultStroke(lineStroke);
+
+        org.jfree.chart.plot.CategoryPlot plot = new org.jfree.chart.plot.CategoryPlot(
+                ds, xAxis, yAxis, renderer);
+        plot.setBackgroundPaint(bgCard);
+        plot.setOutlinePaint(border);
+        plot.setRangeGridlinePaint(border);
+        plot.setDomainGridlinesVisible(false);
+        plot.setRangeZeroBaselineVisible(false);
+
+        JFreeChart chart = new JFreeChart("Patrimônio por Mês", fontBold, plot, false);
+        chart.setBackgroundPaint(bgCard);
+        chart.setBorderVisible(false);
+        chart.getTitle().setPaint(textMut);
+        chart.getTitle().setFont(fontBold);
+
+        SwingNode node = new SwingNode();
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(chart);
+            cp.setBackground(bgCard);
+            node.setContent(cp);
+        });
+
+        StackPane wrapper = new StackPane(node);
+        wrapper.setPrefHeight(200);
+
+        VBox box = new VBox(wrapper);
+        box.getStyleClass().add("card");
+        box.setPadding(Insets.EMPTY);
         return box;
     }
 
