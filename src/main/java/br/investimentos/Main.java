@@ -23,6 +23,7 @@ public class Main extends Application {
         var vacRepo   = new VacMensalRepository();
         var vaiRepo   = new VaiAnualRepository();
         var cotaRepo  = new CotacaoRepository();
+        var gastoRepo = new GastoRepository();
 
         // Serviços
         var taxaSvc      = new TaxaService();
@@ -34,6 +35,7 @@ public class Main extends Application {
         var alertaSvc    = new AlertaService(invRepo, vtaRepo, vacRepo);
         var consolSvc    = new ConsolidacaoService(invRepo, movRepo, vtaRepo, aporteRepo, vacRepo, rendSvc, rvSvc);
         var cotacaoSvc   = new CotacaoService(cotaRepo, vacRepo);
+        var gastosSvc    = new GastosService(gastoRepo);
 
         // Virada de ano na primeira abertura de jan
         vaiSvc.virarAno();
@@ -41,7 +43,9 @@ public class Main extends Application {
         // Janela principal
         MainWindow window = new MainWindow(
                 primaryStage, invRepo, movRepo, aporteRepo, vtaRepo, vacRepo, vaiRepo,
-                taxaSvc, rendSvc, rvSvc, saldoSvc, projecaoSvc, alertaSvc, consolSvc, cotacaoSvc
+                gastoRepo,
+                taxaSvc, rendSvc, rvSvc, saldoSvc, projecaoSvc, alertaSvc, consolSvc, cotacaoSvc,
+                gastosSvc
         );
         window.show();
     }

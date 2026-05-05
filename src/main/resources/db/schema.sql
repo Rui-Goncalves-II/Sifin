@@ -84,6 +84,17 @@ CREATE TABLE IF NOT EXISTS configuracoes (
     valor TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS gastos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipo TEXT NOT NULL,
+    descricao TEXT NOT NULL,
+    periodo_mes INTEGER NOT NULL,
+    periodo_ano INTEGER NOT NULL,
+    valor REAL NOT NULL,
+    notas TEXT,
+    criado_em TEXT DEFAULT (datetime('now','localtime'))
+);
+
 INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES
     ('meta_patrimonio', '1000000.00'),
     ('meta_aporte_mensal', '1000.00'),

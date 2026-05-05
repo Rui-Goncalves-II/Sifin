@@ -404,6 +404,66 @@
     -fx-effect: dropshadow(gaussian, black, 18, 0.15, 0, 5);
 }
 
+/* ── TabPane — padrão do app ──────────────────────────────────────── */
+.tab-pane {
+    -fx-background-color: transparent;
+    -fx-tab-min-height: 44px;
+    -fx-tab-max-height: 44px;
+}
+.tab-pane > .tab-header-area {
+    -fx-background-color: #161b22;
+    -fx-border-color: transparent transparent #2a3441 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0 12 0 12;
+}
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: #161b22;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0 18;
+    -fx-cursor: hand;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab .tab-label {
+    -fx-text-fill: #7d8fa0;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:hover {
+    -fx-background-color: #1c2230;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:hover .tab-label {
+    -fx-text-fill: #e6edf3;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #3fb950 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:selected .tab-label {
+    -fx-text-fill: #e6edf3;
+}
+.tab-pane > .tab-header-area > .tab-down-button,
+.tab-pane > .tab-header-area > .tab-down-button:hover,
+.tab-pane > .tab-header-area > .control-buttons-tab {
+    -fx-background-color: #161b22;
+    -fx-border-color: transparent;
+}
+.tab-pane > .tab-content-area {
+    -fx-background-color: #0d1117;
+    -fx-padding: 0;
+}
+/* remove the X/close button area */
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-close-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-min-width: 0;
+    -fx-pref-width: 0;
+}
+
 /* ── ScrollPane ───────────────────────────────────────────────────── */
 .scroll-pane {
     -fx-background-color: transparent;

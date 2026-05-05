@@ -265,13 +265,106 @@ F5 – Refinamentos: configurações · backup/restore · exportação CSV · al
 
 ---
 
+## Módulo de Gastos
+
+### Banco de Dados
+
+```sql
+CREATE TABLE IF NOT EXISTS gastos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipo TEXT NOT NULL,           -- ALIMENTAR | DIVERSO | MENSALIDADE
+    descricao TEXT NOT NULL,
+    periodo_mes INTEGER NOT NULL,
+    periodo_ano INTEGER NOT NULL,
+    valor REAL NOT NULL,
+    notas TEXT,
+    criado_em TEXT DEFAULT (datetime('now','localtime'))
+);
+```
+
+### Variáveis do Dashboard de Gastos
+
+| Variável | Fórmula |
+|---|---|
+| GAT | Σ valor WHERE tipo='ALIMENTAR' AND ano = filtro |
+| GDT | Σ valor WHERE tipo='DIVERSO' AND ano = filtro |
+| GMT | Σ valor WHERE tipo='MENSALIDADE' AND ano = filtro |
+| GT | GAT + GDT + GMT |
+
+Filtro anual: mesmo padrão do dashboard de investimentos — botões por ano com dados + "Todos os anos" (sentinela `-1`).  
+Modo "Todos os anos": GAT/GDT/GMT/GT somam todos os registros históricos.
+
+### Layout do Dashboard de Gastos
+
+```
+[◀ 2024] [2025] [Todos os anos]
+
+┌─ GT ─┬─ GAT ─┬─ GDT ─┬─ GMT ─┐
+│Total │Aliment│Divers │Mensali│
+└──────┴───────┴───────┴───────┘
+
+[Linha: GAT + GDT + GMT por mês — 3 séries]
+[Linha: GT por mês — 1 série]
+
+Tabela: Mês | Alimentar | Diversos | Mensalidades | Total
+```
+
+### Sub-abas do Painel de Gastos
+
+| Aba | Conteúdo |
+|---|---|
+| Dashboard | KPIs + gráficos + tabela resumo mensal |
+| Alimentar | Lista de gastos ALIMENTAR + botão adicionar |
+| Diversos | Lista de gastos DIVERSO + botão adicionar |
+| Mensalidades | Lista de gastos MENSALIDADE + botão adicionar |
+
+Cada aba de lista: tabela com colunas Descrição / Mês / Ano / Valor / Notas / Ações (editar, excluir).  
+Formulário de gasto: descrição (uppercase), mês (inteiro 1-12), ano (inteiro), valor (decimal BR), notas.  
+Exclusão direta permitida (gastos não têm histórico encadeado).
+
+### Estrutura de Pacotes — Gastos
+
+```
+model/
+  Gasto.java
+  enums/TipoGasto.java         -- ALIMENTAR | DIVERSO | MENSALIDADE
+
+repository/
+  GastoRepository.java         -- save, delete, findAll, findByAno, findByTipoEAno, anosComDados
+
+service/
+  GastosService.java           -- calcularGAT/GDT/GMT/GT(ano), calcularPorMesETipo(ano)
+
+ui/gastos/
+  GastosPanel.java             -- TabPane: Dashboard | Alimentar | Diversos | Mensalidades
+  GastosDashboardPanel.java    -- KPIs + 2 gráficos de linha + tabela mensal
+  GastosListPanel.java         -- lista genérica filtrada por TipoGasto
+  GastoFormDialog.java         -- formulário de criação/edição de gasto
+```
+
+### Tarefas de Implementação
+
+- [x] Adicionar especificação no CLAUDE.md
+- [ ] Adicionar tabela `gastos` ao schema.sql
+- [ ] Criar enum `TipoGasto` (ALIMENTAR | DIVERSO | MENSALIDADE)
+- [ ] Criar model `Gasto`
+- [ ] Criar `GastoRepository`
+- [ ] Criar `GastosService`
+- [ ] Criar `GastoFormDialog`
+- [ ] Criar `GastosListPanel`
+- [ ] Criar `GastosDashboardPanel`
+- [ ] Criar `GastosPanel`
+- [ ] Habilitar item Gastos na sidebar (remover `disabled=true`)
+- [ ] Wiring em `MainWindow`
+
+---
+
 ## Incrementos Futuros
 
 - **Cotações BR:** Brapi.dev para ações/FIIs/ETFs; API B3 para Tesouro Direto; CoinGecko para cripto
 - **Análises:** comparativo CDI, rentabilidade acumulada, rebalanceamento por alocação alvo
 - **Usabilidade:** importação CSV (extrato corretora), exportação PDF (Apache PDFBox), tema escuro/claro
 - **Segurança:** backup automático diário, exportação JSON, SQLCipher
-- **Gastos:** módulo futuro com lógica própria (placeholder na sidebar já implementado)
 
 ---
 

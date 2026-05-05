@@ -5,6 +5,7 @@ import br.investimentos.service.*;
 import br.investimentos.ui.component.SideBar;
 import br.investimentos.ui.dashboard.DashboardPanel;
 import br.investimentos.ui.dolar.DolarListPanel;
+import br.investimentos.ui.gastos.GastosPanel;
 import br.investimentos.ui.rendafixa.RendaFixaListPanel;
 import br.investimentos.ui.rendavariavel.RendaVariavelListPanel;
 import br.investimentos.ui.transacao.TransacaoPanel;
@@ -36,6 +37,7 @@ public class MainWindow {
     private final VtaMensalRepository vtaRepo;
     private final VacMensalRepository vacRepo;
     private final VaiAnualRepository vaiRepo;
+    private final GastoRepository gastoRepo;
     private final TaxaService taxaSvc;
     private final RendimentoService rendSvc;
     private final RendaVariavelService rvSvc;
@@ -44,21 +46,26 @@ public class MainWindow {
     private final AlertaService alertaSvc;
     private final ConsolidacaoService consolSvc;
     private final CotacaoService cotacaoSvc;
+    private final GastosService gastosSvc;
 
     public MainWindow(Stage stage,
                       InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
                       AporteRvRepository aporteRepo, VtaMensalRepository vtaRepo,
                       VacMensalRepository vacRepo, VaiAnualRepository vaiRepo,
+                      GastoRepository gastoRepo,
                       TaxaService taxaSvc, RendimentoService rendSvc,
                       RendaVariavelService rvSvc, SaldoService saldoSvc,
                       ProjecaoService projecaoSvc, AlertaService alertaSvc,
-                      ConsolidacaoService consolSvc, CotacaoService cotacaoSvc) {
+                      ConsolidacaoService consolSvc, CotacaoService cotacaoSvc,
+                      GastosService gastosSvc) {
         this.stage = stage;
         this.invRepo = invRepo; this.movRepo = movRepo; this.aporteRepo = aporteRepo;
         this.vtaRepo = vtaRepo; this.vacRepo = vacRepo; this.vaiRepo = vaiRepo;
+        this.gastoRepo = gastoRepo;
         this.taxaSvc = taxaSvc; this.rendSvc = rendSvc; this.rvSvc = rvSvc;
         this.saldoSvc = saldoSvc; this.projecaoSvc = projecaoSvc;
         this.alertaSvc = alertaSvc; this.consolSvc = consolSvc; this.cotacaoSvc = cotacaoSvc;
+        this.gastosSvc = gastosSvc;
 
         contentArea = new StackPane();
         contentArea.getStyleClass().add("content-area");
@@ -69,10 +76,9 @@ public class MainWindow {
         sidebar.addItem(new SideBar.NavItem(null, loadSidebarIcon("/icons/renda-passiva.png", 22), "Renda Fixa", () -> loadPanel(makeRendaFixa()), false));
         sidebar.addItem(new SideBar.NavItem("💹", "Renda Variável", () -> loadPanel(makeRendaVariavel())));
         sidebar.addItem(new SideBar.NavItem("$", "Dólar", () -> loadPanel(makeDolar())));
+        sidebar.addItem(new SideBar.NavItem(null, loadSidebarIcon("/icons/dinheiro.png", 22), "Gastos", () -> loadPanel(makeGastos()), false));
         sidebar.addItem(new SideBar.NavItem("⇄", "Transações", () -> loadPanel(makeTransacoes())));
         sidebar.addSpacer();
-        sidebar.addSeparator();
-        sidebar.addItem(new SideBar.NavItem("%", "Gastos", null, true));
 
         // Navega para o Dashboard por padrão
         loadPanel(makeDashboard());
@@ -99,6 +105,10 @@ public class MainWindow {
 
     private Node makeTransacoes() {
         return new TransacaoPanel(invRepo, movRepo, aporteRepo);
+    }
+
+    private Node makeGastos() {
+        return new GastosPanel(gastoRepo, gastosSvc);
     }
 
     private ImageView loadSidebarIcon(String resourcePath, int size) {
