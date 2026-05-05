@@ -2,6 +2,7 @@ package br.investimentos.ui.rendavariavel;
 
 import br.investimentos.model.AporteRv;
 import br.investimentos.model.Investimento;
+import br.investimentos.model.VacMensal;
 import br.investimentos.model.enums.TipoOperacaoRv;
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
@@ -12,6 +13,12 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+
+import javafx.embed.swing.SwingNode;
+import javax.swing.SwingUtilities;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.DefaultCategoryDataset;
 
 import java.util.function.Consumer;
 
@@ -153,10 +160,114 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         });
 
         opTable.getColumns().addAll(cPer, cTipo, cQtd, cPreco, cValor, cAcoes);
-        opTable.getItems().addAll(aporteRepo.findByInvestimento(inv.getId()));
+        java.util.List<AporteRv> ops = aporteRepo.findByInvestimento(inv.getId());
+        java.util.Collections.reverse(ops);
+        opTable.getItems().addAll(ops);
 
-        content.getChildren().addAll(grid, opTitle, opTable);
+        HBox graficos = buildGraficos();
+        content.getChildren().addAll(grid, graficos, opTitle, opTable);
         return content;
+    }
+
+    private HBox buildGraficos() {
+        java.awt.Color bgCard  = new java.awt.Color(0x16, 0x1b, 0x22);
+        java.awt.Color border  = new java.awt.Color(0x2a, 0x34, 0x41);
+        java.awt.Color textMut = new java.awt.Color(0x7d, 0x8f, 0xa0);
+        java.awt.Color amber   = new java.awt.Color(0xe3, 0xb3, 0x41);
+        java.awt.Color blue    = new java.awt.Color(0x58, 0xa6, 0xff);
+        java.awt.Font  fontXs   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10);
+        java.awt.Font  fontBold = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+        java.awt.BasicStroke stroke = new java.awt.BasicStroke(
+                1.5f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND);
+        java.awt.geom.Ellipse2D.Double dot = new java.awt.geom.Ellipse2D.Double(-5, -5, 10, 10);
+
+        // ── VAC por Mês ──────────────────────────────────────────────────
+        DefaultCategoryDataset vacDs = new DefaultCategoryDataset();
+        for (VacMensal v : vacRepo.findByInvestimento(inv.getId()))
+            vacDs.addValue(v.getVac(), "VAC", FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()));
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer vacRend =
+            new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
+                @Override public java.awt.Paint getItemPaint(int row, int col) { return blue; }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) { return blue; }
+            };
+        vacRend.setDefaultLinesVisible(true); vacRend.setDefaultShapesVisible(true);
+        vacRend.setDefaultShapesFilled(true); vacRend.setUseFillPaint(true);
+        vacRend.setDefaultShape(dot); vacRend.setDefaultStroke(stroke);
+
+        org.jfree.chart.axis.CategoryAxis xV = new org.jfree.chart.axis.CategoryAxis(null);
+        xV.setTickLabelPaint(textMut); xV.setTickLabelFont(fontXs);
+        xV.setAxisLinePaint(border); xV.setTickMarkPaint(border);
+        org.jfree.chart.axis.NumberAxis yV = new org.jfree.chart.axis.NumberAxis("R$");
+        yV.setTickLabelPaint(textMut); yV.setTickLabelFont(fontXs);
+        yV.setAxisLinePaint(border); yV.setTickMarkPaint(border);
+        yV.setAutoRangeIncludesZero(false);
+
+        org.jfree.chart.plot.CategoryPlot vacPlot = new org.jfree.chart.plot.CategoryPlot(vacDs, xV, yV, vacRend);
+        vacPlot.setBackgroundPaint(bgCard); vacPlot.setOutlinePaint(border);
+        vacPlot.setRangeGridlinePaint(border); vacPlot.setDomainGridlinesVisible(false);
+
+        JFreeChart vacChart = new JFreeChart("VAC por Mês", fontBold, vacPlot, false);
+        vacChart.setBackgroundPaint(bgCard); vacChart.setBorderVisible(false);
+        vacChart.getTitle().setPaint(textMut); vacChart.getTitle().setFont(fontBold);
+
+        SwingNode vacNode = new SwingNode();
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(vacChart); cp.setBackground(bgCard); vacNode.setContent(cp);
+        });
+        StackPane vacPane = new StackPane(vacNode); vacPane.setPrefSize(400, 220);
+
+        // ── Dividendos por Período ───────────────────────────────────────
+        java.util.Map<String, Double> divMap = new java.util.LinkedHashMap<>();
+        aporteRepo.findByInvestimento(inv.getId()).stream()
+            .filter(a -> a.getTipoOp() == TipoOperacaoRv.DIVIDENDO)
+            .sorted(java.util.Comparator.comparingInt(
+                    (AporteRv a) -> a.getPeriodoAno() * 100 + a.getPeriodoMes()))
+            .forEach(a -> divMap.merge(
+                FormatUtil.mesAno(a.getPeriodoMes(), a.getPeriodoAno()), a.getValor(), Double::sum));
+
+        DefaultCategoryDataset divDs = new DefaultCategoryDataset();
+        divMap.forEach((key, val) -> divDs.addValue(val, "Dividendos", key));
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer divRend =
+            new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
+                @Override public java.awt.Paint getItemPaint(int row, int col) { return amber; }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) { return amber; }
+            };
+        divRend.setDefaultLinesVisible(true); divRend.setDefaultShapesVisible(true);
+        divRend.setDefaultShapesFilled(true); divRend.setUseFillPaint(true);
+        divRend.setDefaultShape(dot); divRend.setDefaultStroke(stroke);
+
+        org.jfree.chart.axis.CategoryAxis xD = new org.jfree.chart.axis.CategoryAxis(null);
+        xD.setTickLabelPaint(textMut); xD.setTickLabelFont(fontXs);
+        xD.setAxisLinePaint(border); xD.setTickMarkPaint(border);
+        org.jfree.chart.axis.NumberAxis yD = new org.jfree.chart.axis.NumberAxis("R$");
+        yD.setTickLabelPaint(textMut); yD.setTickLabelFont(fontXs);
+        yD.setAxisLinePaint(border); yD.setTickMarkPaint(border);
+
+        org.jfree.chart.plot.CategoryPlot divPlot = new org.jfree.chart.plot.CategoryPlot(divDs, xD, yD, divRend);
+        divPlot.setBackgroundPaint(bgCard); divPlot.setOutlinePaint(border);
+        divPlot.setRangeGridlinePaint(border); divPlot.setDomainGridlinesVisible(false);
+
+        JFreeChart divChart = new JFreeChart("Dividendos por Período", fontBold, divPlot, false);
+        divChart.setBackgroundPaint(bgCard); divChart.setBorderVisible(false);
+        divChart.getTitle().setPaint(textMut); divChart.getTitle().setFont(fontBold);
+
+        SwingNode divNode = new SwingNode();
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(divChart); cp.setBackground(bgCard); divNode.setContent(cp);
+        });
+        StackPane divPane = new StackPane(divNode); divPane.setPrefSize(400, 220);
+
+        VBox vacBox = new VBox(vacPane);
+        vacBox.getStyleClass().add("card"); vacBox.setPadding(Insets.EMPTY);
+        HBox.setHgrow(vacBox, Priority.ALWAYS);
+
+        VBox divBox = new VBox(divPane);
+        divBox.getStyleClass().add("card"); divBox.setPadding(Insets.EMPTY);
+        HBox.setHgrow(divBox, Priority.ALWAYS);
+
+        return new HBox(12, vacBox, divBox);
     }
 
     private VBox metricCard(String title, String value, String valueStyle) {

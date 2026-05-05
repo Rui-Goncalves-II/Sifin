@@ -19,6 +19,12 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javafx.embed.swing.SwingNode;
+import javax.swing.SwingUtilities;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.DefaultCategoryDataset;
+
 import java.util.function.Consumer;
 
 public class RendaFixaDetalhePanel extends BorderPane {
@@ -112,6 +118,19 @@ public class RendaFixaDetalhePanel extends BorderPane {
                 (inv.getDataVencimento() != null ? "  |  Vencimento: " + inv.getDataVencimento() : ""));
         info.getStyleClass().add("card-label");
 
+        // Dados para gráficos e tabela
+        List<VtaMensal> vtas = vtaRepo.findByInvestimento(inv.getId());
+        Map<Integer, Double> somaAntByVtaId = new HashMap<>();
+        double prevR = 0;
+        int prevAno = -1;
+        for (VtaMensal v : vtas) {
+            if (v.getPeriodoAno() != prevAno) { prevAno = v.getPeriodoAno(); prevR = 0; }
+            somaAntByVtaId.put(v.getId(), prevR);
+            prevR = rendSvc.calcularR(v);
+        }
+
+        HBox graficos = buildGraficos(vtas, somaAntByVtaId);
+
         // Histórico VTA
         Label histTitle = new Label("Histórico de VTA");
         histTitle.getStyleClass().add("section-title");
@@ -139,21 +158,6 @@ public class RendaFixaDetalhePanel extends BorderPane {
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(viVal));
         });
         cVi.setPrefWidth(130);
-
-        List<VtaMensal> vtas = vtaRepo.findByInvestimento(inv.getId());
-
-        // Pre-computar soma dos rendimentos anteriores para cada VTA (evita N queries)
-        Map<Integer, Double> somaAntByVtaId = new HashMap<>();
-        double prevR = 0;
-        int prevAno = -1;
-        for (VtaMensal v : vtas) {
-            if (v.getPeriodoAno() != prevAno) {
-                prevAno = v.getPeriodoAno();
-                prevR = 0;
-            }
-            somaAntByVtaId.put(v.getId(), prevR);
-            prevR = rendSvc.calcularR(v);
-        }
 
         TableColumn<VtaMensal, String> cR = new TableColumn<>("Rend. Acumulado");
         cR.setCellValueFactory(c -> {
@@ -321,11 +325,114 @@ public class RendaFixaDetalhePanel extends BorderPane {
         });
 
         movTable.getColumns().addAll(mPer, mTipo, mValor, mNotas, mAcoes);
-        movTable.getItems().addAll(movRepo.findByInvestimento(inv.getId()));
+        List<Movimentacao> movs = movRepo.findByInvestimento(inv.getId());
+        java.util.Collections.reverse(movs);
+        movTable.getItems().addAll(movs);
 
-        content.getChildren().addAll(new VBox(4, info), sumGrid, histTitle, vtaTable,
+        content.getChildren().addAll(new VBox(4, info), sumGrid, graficos, histTitle, vtaTable,
                 movHeader, movTable);
         return content;
+    }
+
+    private HBox buildGraficos(List<VtaMensal> vtas, Map<Integer, Double> somaAntByVtaId) {
+        java.awt.Color bgCard  = new java.awt.Color(0x16, 0x1b, 0x22);
+        java.awt.Color border  = new java.awt.Color(0x2a, 0x34, 0x41);
+        java.awt.Color textMut = new java.awt.Color(0x7d, 0x8f, 0xa0);
+        java.awt.Color green   = new java.awt.Color(0x3f, 0xb9, 0x50);
+        java.awt.Color red     = new java.awt.Color(0xf8, 0x51, 0x49);
+        java.awt.Color blue    = new java.awt.Color(0x58, 0xa6, 0xff);
+        java.awt.Font  fontXs   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10);
+        java.awt.Font  fontBold = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+        java.awt.BasicStroke stroke = new java.awt.BasicStroke(
+                1.5f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND);
+        java.awt.geom.Ellipse2D.Double dot = new java.awt.geom.Ellipse2D.Double(-5, -5, 10, 10);
+
+        // ── Saldo (VTA) por Mês ──────────────────────────────────────────
+        DefaultCategoryDataset saldoDs = new DefaultCategoryDataset();
+        for (VtaMensal v : vtas)
+            saldoDs.addValue(v.getVta(), "Saldo", FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()));
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer saldoRend =
+            new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
+                @Override public java.awt.Paint getItemPaint(int row, int col) { return blue; }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) { return blue; }
+            };
+        saldoRend.setDefaultLinesVisible(true); saldoRend.setDefaultShapesVisible(true);
+        saldoRend.setDefaultShapesFilled(true); saldoRend.setUseFillPaint(true);
+        saldoRend.setDefaultShape(dot); saldoRend.setDefaultStroke(stroke);
+
+        org.jfree.chart.axis.CategoryAxis xS = new org.jfree.chart.axis.CategoryAxis(null);
+        xS.setTickLabelPaint(textMut); xS.setTickLabelFont(fontXs);
+        xS.setAxisLinePaint(border); xS.setTickMarkPaint(border);
+        org.jfree.chart.axis.NumberAxis yS = new org.jfree.chart.axis.NumberAxis("R$");
+        yS.setTickLabelPaint(textMut); yS.setTickLabelFont(fontXs);
+        yS.setAxisLinePaint(border); yS.setTickMarkPaint(border);
+        yS.setAutoRangeIncludesZero(false);
+
+        org.jfree.chart.plot.CategoryPlot saldoPlot = new org.jfree.chart.plot.CategoryPlot(saldoDs, xS, yS, saldoRend);
+        saldoPlot.setBackgroundPaint(bgCard); saldoPlot.setOutlinePaint(border);
+        saldoPlot.setRangeGridlinePaint(border); saldoPlot.setDomainGridlinesVisible(false);
+
+        JFreeChart saldoChart = new JFreeChart("Saldo por Mês", fontBold, saldoPlot, false);
+        saldoChart.setBackgroundPaint(bgCard); saldoChart.setBorderVisible(false);
+        saldoChart.getTitle().setPaint(textMut); saldoChart.getTitle().setFont(fontBold);
+
+        SwingNode saldoNode = new SwingNode();
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(saldoChart); cp.setBackground(bgCard); saldoNode.setContent(cp);
+        });
+        StackPane saldoPane = new StackPane(saldoNode); saldoPane.setPrefSize(400, 220);
+
+        // ── Rendimento Mensal ────────────────────────────────────────────
+        DefaultCategoryDataset rendDs = new DefaultCategoryDataset();
+        for (VtaMensal v : vtas) {
+            double rMensal = rendSvc.calcularR(v) - somaAntByVtaId.getOrDefault(v.getId(), 0.0);
+            rendDs.addValue(rMensal, "Rendimento", FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()));
+        }
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer rendRend =
+            new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
+                @Override public java.awt.Paint getItemPaint(int row, int col) { return textMut; }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) {
+                    Number val = rendDs.getValue(row, col);
+                    return (val != null && val.doubleValue() >= 0) ? green : red;
+                }
+            };
+        rendRend.setDefaultLinesVisible(true); rendRend.setDefaultShapesVisible(true);
+        rendRend.setDefaultShapesFilled(true); rendRend.setUseFillPaint(true);
+        rendRend.setDefaultShape(dot); rendRend.setDefaultStroke(stroke);
+
+        org.jfree.chart.axis.CategoryAxis xR = new org.jfree.chart.axis.CategoryAxis(null);
+        xR.setTickLabelPaint(textMut); xR.setTickLabelFont(fontXs);
+        xR.setAxisLinePaint(border); xR.setTickMarkPaint(border);
+        org.jfree.chart.axis.NumberAxis yR = new org.jfree.chart.axis.NumberAxis("R$");
+        yR.setTickLabelPaint(textMut); yR.setTickLabelFont(fontXs);
+        yR.setAxisLinePaint(border); yR.setTickMarkPaint(border);
+
+        org.jfree.chart.plot.CategoryPlot rendPlot = new org.jfree.chart.plot.CategoryPlot(rendDs, xR, yR, rendRend);
+        rendPlot.setBackgroundPaint(bgCard); rendPlot.setOutlinePaint(border);
+        rendPlot.setRangeGridlinePaint(border); rendPlot.setDomainGridlinesVisible(false);
+        rendPlot.setRangeZeroBaselinePaint(textMut); rendPlot.setRangeZeroBaselineVisible(true);
+
+        JFreeChart rendChart = new JFreeChart("Rendimento Mensal", fontBold, rendPlot, false);
+        rendChart.setBackgroundPaint(bgCard); rendChart.setBorderVisible(false);
+        rendChart.getTitle().setPaint(textMut); rendChart.getTitle().setFont(fontBold);
+
+        SwingNode rendNode = new SwingNode();
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(rendChart); cp.setBackground(bgCard); rendNode.setContent(cp);
+        });
+        StackPane rendPane = new StackPane(rendNode); rendPane.setPrefSize(400, 220);
+
+        VBox saldoBox = new VBox(saldoPane);
+        saldoBox.getStyleClass().add("card"); saldoBox.setPadding(Insets.EMPTY);
+        HBox.setHgrow(saldoBox, Priority.ALWAYS);
+
+        VBox rendBox = new VBox(rendPane);
+        rendBox.getStyleClass().add("card"); rendBox.setPadding(Insets.EMPTY);
+        HBox.setHgrow(rendBox, Priority.ALWAYS);
+
+        return new HBox(12, saldoBox, rendBox);
     }
 
     private Label colHeader(String sigla) {

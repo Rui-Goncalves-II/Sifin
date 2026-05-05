@@ -9,6 +9,9 @@ import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.GlossarioTooltip;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingNode;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -160,18 +163,20 @@ public class DashboardPanel extends BorderPane {
         bar.setPadding(new Insets(0, 0, 4, 0));
 
         bar.getChildren().addAll(
-            makePillToggle("🏦  Renda Fixa   " + FormatUtil.brlAbrev(r.vtarf()),
+            makePillToggle(loadIcon("/icons/renda-passiva.png", 14),
+                    "Renda Fixa   " + FormatUtil.brlAbrev(r.vtarf()),
                     "pill-rf", TipoInvestimento.RENDA_FIXA),
-            makePillToggle("💹  Renda Variável   " + FormatUtil.brlAbrev(r.vtarv()),
+            makePillToggle(null, "💹  Renda Variável   " + FormatUtil.brlAbrev(r.vtarv()),
                     "pill-rv", TipoInvestimento.RENDA_VARIAVEL),
-            makePillToggle("💵  Dólar   " + FormatUtil.brlAbrev(dolarTotal),
+            makePillToggle(null, "$  Dólar   " + FormatUtil.brlAbrev(dolarTotal),
                     "pill-usd", TipoInvestimento.DOLAR)
         );
         return bar;
     }
 
-    private Button makePillToggle(String text, String colorClass, TipoInvestimento tipo) {
+    private Button makePillToggle(Node graphic, String text, String colorClass, TipoInvestimento tipo) {
         Button btn = new Button(text);
+        if (graphic != null) btn.setGraphic(graphic);
         btn.getStyleClass().addAll("pill-btn", colorClass);
         if (tiposFiltro.contains(tipo)) btn.getStyleClass().add("active");
         btn.setOnAction(e -> {
@@ -782,6 +787,31 @@ public class DashboardPanel extends BorderPane {
                 c -> Platform.runLater(() -> usdLabel.setText("💰 USD: R$"
                         + FormatUtil.numero(c.getValorCompra(), 2) + "/" + FormatUtil.numero(c.getValorVenda(), 2))),
                 () -> usdLabel.setText("💰 USD: —"));
+    }
+
+    private ImageView loadIcon(String resourcePath, int size) {
+        var stream = getClass().getResourceAsStream(resourcePath);
+        if (stream == null) return new ImageView();
+        Image original = new Image(stream, size * 2, size * 2, true, true);
+        int w = (int) original.getWidth();
+        int h = (int) original.getHeight();
+        WritableImage result = new WritableImage(w, h);
+        var reader = original.getPixelReader();
+        var writer = result.getPixelWriter();
+        javafx.scene.paint.Color target = javafx.scene.paint.Color.web("#adbac7");
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                javafx.scene.paint.Color px = reader.getColor(x, y);
+                double lum = 0.299 * px.getRed() + 0.587 * px.getGreen() + 0.114 * px.getBlue();
+                double alpha = (1.0 - lum) * px.getOpacity();
+                writer.setColor(x, y, alpha > 0.05
+                    ? new javafx.scene.paint.Color(target.getRed(), target.getGreen(), target.getBlue(), Math.min(alpha, 1.0))
+                    : javafx.scene.paint.Color.TRANSPARENT);
+            }
+        }
+        ImageView iv = new ImageView(result);
+        iv.setFitWidth(size); iv.setFitHeight(size); iv.setSmooth(true);
+        return iv;
     }
 
     private static double colW(String header, double contentMin) {

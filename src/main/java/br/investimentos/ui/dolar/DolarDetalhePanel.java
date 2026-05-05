@@ -162,7 +162,9 @@ public class DolarDetalhePanel extends BorderPane {
         });
 
         movTable.getColumns().addAll(cPer, cTipo, cValor, cCot, cBrl, cAcoes);
-        movTable.getItems().addAll(movRepo.findByInvestimento(inv.getId()));
+        java.util.List<Movimentacao> movs = movRepo.findByInvestimento(inv.getId());
+        java.util.Collections.reverse(movs);
+        movTable.getItems().addAll(movs);
 
         content.getChildren().addAll(grid, movTitle, movTable);
         return content;
