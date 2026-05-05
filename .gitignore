@@ -17,6 +17,7 @@ out/
 
 # Banco de dados local
 data/
+.db
 
 # OS
 .DS_Store
