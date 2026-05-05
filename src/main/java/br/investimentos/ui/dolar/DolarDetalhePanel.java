@@ -45,7 +45,7 @@ public class DolarDetalhePanel extends BorderPane {
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
         Button btnMov = new Button("+ Movimentação");
         btnMov.getStyleClass().add("btn-primary");
-        btnMov.setOnAction(e -> { new DolarMovFormDialog(inv, movRepo).showAndWait(); construir(); });
+        btnMov.setOnAction(e -> { new DolarMovFormDialog(inv, new Movimentacao(), movRepo).showAndWait(); construir(); });
         header.getChildren().addAll(btnVoltar, title, spacer, btnMov);
         setTop(header);
 
@@ -83,6 +83,7 @@ public class DolarDetalhePanel extends BorderPane {
 
         TableView<Movimentacao> movTable = new TableView<>();
         movTable.getStyleClass().add("table-view");
+        movTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         movTable.setPrefHeight(300);
 
         TableColumn<Movimentacao, String> cPer = new TableColumn<>("Período");
@@ -98,6 +99,18 @@ public class DolarDetalhePanel extends BorderPane {
         cValor.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
                 "$ " + FormatUtil.numero(c.getValue().getValor(), 4)));
         cValor.setPrefWidth(120);
+        cValor.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null || getTableRow().getItem() == null) {
+                    setText(null); setStyle(""); return;
+                }
+                boolean entrada = getTableRow().getItem().getTipoMov() == TipoMovimentacao.DEPOSITO;
+                setText(item + (entrada ? " ▲" : " ▼"));
+                setStyle("-fx-text-fill: " + (entrada ? "#2e7d32" : "#c62828") + ";");
+            }
+        });
 
         TableColumn<Movimentacao, String> cCot = new TableColumn<>("Cotação R$");
         cCot.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
@@ -111,19 +124,41 @@ public class DolarDetalhePanel extends BorderPane {
             return new javafx.beans.property.SimpleStringProperty(brl > 0 ? FormatUtil.brl(brl) : "—");
         });
         cBrl.setPrefWidth(120);
+        cBrl.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null || getTableRow().getItem() == null) {
+                    setText(null); setStyle(""); return;
+                }
+                boolean entrada = getTableRow().getItem().getTipoMov() == TipoMovimentacao.DEPOSITO;
+                setText(item + (entrada ? " ▲" : " ▼"));
+                setStyle("-fx-text-fill: " + (entrada ? "#2e7d32" : "#c62828") + ";");
+            }
+        });
 
         TableColumn<Movimentacao, Void> cAcoes = new TableColumn<>("Ações");
-        cAcoes.setPrefWidth(70);
+        cAcoes.setPrefWidth(150);
         cAcoes.setCellFactory(tc -> new TableCell<>() {
-            final Button del = new Button("🗑");
-            { del.getStyleClass().add("btn-icon"); del.setStyle("-fx-text-fill: #c62828;");
-              del.setOnAction(e -> {
-                  Movimentacao m = getTableView().getItems().get(getIndex());
-                  Alert conf = new Alert(Alert.AlertType.CONFIRMATION, "Remover movimentação?", ButtonType.YES, ButtonType.NO);
-                  conf.showAndWait().filter(r -> r == ButtonType.YES).ifPresent(r -> { movRepo.deletar(m.getId()); construir(); });
-              });
+            final Button edit = new Button("✏ Editar");
+            final Button del  = new Button("🗑 Excluir");
+            {
+                edit.getStyleClass().add("btn-secondary");
+                del.getStyleClass().add("btn-danger");
+                edit.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
+                del.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
+                edit.setOnAction(e -> {
+                    Movimentacao m = getTableView().getItems().get(getIndex());
+                    new DolarMovFormDialog(inv, m, movRepo).showAndWait();
+                    construir();
+                });
+                del.setOnAction(e -> {
+                    Movimentacao m = getTableView().getItems().get(getIndex());
+                    Alert conf = new Alert(Alert.AlertType.CONFIRMATION, "Remover movimentação?", ButtonType.YES, ButtonType.NO);
+                    conf.showAndWait().filter(r -> r == ButtonType.YES).ifPresent(r -> { movRepo.deletar(m.getId()); construir(); });
+                });
             }
-            @Override protected void updateItem(Void v, boolean empty) { super.updateItem(v, empty); setGraphic(empty ? null : del); }
+            @Override protected void updateItem(Void v, boolean empty) { super.updateItem(v, empty); setGraphic(empty ? null : new HBox(6, edit, del)); }
         });
 
         movTable.getColumns().addAll(cPer, cTipo, cValor, cCot, cBrl, cAcoes);

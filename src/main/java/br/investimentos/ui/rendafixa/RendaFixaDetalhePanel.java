@@ -263,6 +263,18 @@ public class RendaFixaDetalhePanel extends BorderPane {
         mValor.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
                 FormatUtil.brl(c.getValue().getValor())));
         mValor.setPrefWidth(130);
+        mValor.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null || getTableRow().getItem() == null) {
+                    setText(null); setStyle(""); return;
+                }
+                boolean entrada = getTableRow().getItem().getTipoMov() == TipoMovimentacao.DEPOSITO;
+                setText(item + (entrada ? " ▲" : " ▼"));
+                setStyle("-fx-text-fill: " + (entrada ? "#2e7d32" : "#c62828") + ";");
+            }
+        });
 
         TableColumn<Movimentacao, String> mNotas = new TableColumn<>("Notas");
         mNotas.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(

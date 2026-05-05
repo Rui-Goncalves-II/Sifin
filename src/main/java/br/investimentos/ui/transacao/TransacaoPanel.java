@@ -76,6 +76,19 @@ public class TransacaoPanel extends BorderPane {
         cValor.setCellValueFactory(c -> new SimpleStringProperty(FormatUtil.brl(c.getValue().valor())));
         cValor.setPrefWidth(140);
         cValor.setStyle("-fx-alignment: CENTER-RIGHT;");
+        cValor.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null || getTableRow().getItem() == null) {
+                    setText(null); setStyle(""); return;
+                }
+                LinhaTransacao linha = getTableRow().getItem();
+                boolean entrada = !linha.tipo().equals("SAQUE") && !linha.tipo().equals("VENDA");
+                setText(item + (entrada ? " ▲" : " ▼"));
+                setStyle("-fx-text-fill: " + (entrada ? "#2e7d32" : "#c62828") + "; -fx-alignment: CENTER-RIGHT;");
+            }
+        });
 
         TableColumn<LinhaTransacao, String> cNotas = new TableColumn<>("Notas");
         cNotas.setCellValueFactory(c -> new SimpleStringProperty(

@@ -14,8 +14,9 @@ import java.time.LocalDate;
 
 public class AporteRvFormDialog extends Dialog<Void> {
 
-    public AporteRvFormDialog(Investimento inv, AporteRvRepository aporteRepo) {
-        setTitle("Nova Operação — " + inv.getNome());
+    public AporteRvFormDialog(Investimento inv, AporteRv aporte, AporteRvRepository aporteRepo) {
+        boolean isEdit = aporte.getId() != 0;
+        setTitle((isEdit ? "Editar" : "Nova") + " Operação — " + inv.getNome());
         initModality(Modality.APPLICATION_MODAL);
 
         LocalDate hoje = LocalDate.now();
@@ -26,15 +27,12 @@ public class AporteRvFormDialog extends Dialog<Void> {
 
         ComboBox<TipoOperacaoRv> fTipo = new ComboBox<>();
         fTipo.getItems().addAll(TipoOperacaoRv.values());
-        fTipo.setValue(TipoOperacaoRv.COMPRA);
         addRow(form, 0, "Tipo *", fTipo);
 
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
-        fMes.setValue(hoje.getMonthValue());
         TextField fAno = new TextField(); fAno.setPrefWidth(70);
         InputUtil.applyIntegerFilter(fAno);
-        fAno.setText(String.valueOf(hoje.getYear()));
         HBox perBox = new HBox(8, fMes, new Label("/ "), fAno);
         perBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         addRow(form, 1, "Período", perBox);
@@ -54,6 +52,20 @@ public class AporteRvFormDialog extends Dialog<Void> {
         fValor.setPromptText("Valor total");
         addRow(form, 4, "Valor Total (R$) *", fValor);
 
+        TextField fNotas = new TextField(); fNotas.setPromptText("Observações");
+        addRow(form, 5, "Notas", fNotas);
+
+        // Pre-fill antes de configurar listeners para evitar efeitos colaterais
+        fTipo.setValue(isEdit && aporte.getTipoOp() != null ? aporte.getTipoOp() : TipoOperacaoRv.COMPRA);
+        fMes.setValue(isEdit && aporte.getPeriodoMes() != 0 ? aporte.getPeriodoMes() : hoje.getMonthValue());
+        fAno.setText(isEdit && aporte.getPeriodoAno() != 0 ? String.valueOf(aporte.getPeriodoAno()) : String.valueOf(hoje.getYear()));
+        if (isEdit) {
+            if (aporte.getQuantidade() != null) fQtd.setText(String.valueOf(aporte.getQuantidade()).replace(".", ","));
+            if (aporte.getPrecoPorCota() != null) fPreco.setText(String.valueOf(aporte.getPrecoPorCota()).replace(".", ","));
+            if (aporte.getValor() != 0) fValor.setText(String.valueOf(aporte.getValor()).replace(".", ","));
+            fNotas.setText(aporte.getNotas() != null ? aporte.getNotas() : "");
+        }
+
         // Auto-calcula valor ao preencher qtd e preço
         Runnable calcValor = () -> {
             try {
@@ -66,20 +78,21 @@ public class AporteRvFormDialog extends Dialog<Void> {
         fPreco.textProperty().addListener((o, a, b) -> calcValor.run());
 
         // Desabilita campos irrelevantes para DIVIDENDO
-        fTipo.valueProperty().addListener((o, a, tipo) -> {
+        fTipo.valueProperty().addListener((o, oldVal, tipo) -> {
             boolean isDividendo = tipo == TipoOperacaoRv.DIVIDENDO;
             fQtd.setDisable(isDividendo);
             fPreco.setDisable(isDividendo);
             if (isDividendo) { fQtd.clear(); fPreco.clear(); }
         });
-
-        TextField fNotas = new TextField(); fNotas.setPromptText("Observações");
-        addRow(form, 5, "Notas", fNotas);
+        if (fTipo.getValue() == TipoOperacaoRv.DIVIDENDO) {
+            fQtd.setDisable(true);
+            fPreco.setDisable(true);
+        }
 
         Label errLabel = new Label(); errLabel.setStyle("-fx-text-fill: #c62828;");
         getDialogPane().setContent(new VBox(8, form, errLabel));
 
-        ButtonType btnSalvar = new ButtonType("Registrar", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnSalvar = new ButtonType("Salvar", ButtonBar.ButtonData.OK_DONE);
         getDialogPane().getButtonTypes().addAll(btnSalvar, ButtonType.CANCEL);
 
         ((Button) getDialogPane().lookupButton(btnSalvar)).addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
@@ -89,18 +102,18 @@ public class AporteRvFormDialog extends Dialog<Void> {
                 double valor = Double.parseDouble(fValor.getText().strip().replace(",", "."));
                 TipoOperacaoRv tipo = fTipo.getValue();
 
-                AporteRv a = new AporteRv();
-                a.setInvestimentoId(inv.getId());
-                a.setTipoOp(tipo);
-                a.setPeriodoMes(mes); a.setPeriodoAno(ano);
-                a.setValor(valor);
-                a.setNotas(fNotas.getText().strip().isEmpty() ? null : fNotas.getText().strip());
-
+                aporte.setInvestimentoId(inv.getId());
+                aporte.setTipoOp(tipo);
+                aporte.setPeriodoMes(mes); aporte.setPeriodoAno(ano);
+                aporte.setValor(valor);
+                aporte.setNotas(fNotas.getText().strip().isEmpty() ? null : fNotas.getText().strip());
+                aporte.setQuantidade(null);
+                aporte.setPrecoPorCota(null);
                 if (tipo != TipoOperacaoRv.DIVIDENDO) {
-                    if (!fQtd.getText().isBlank()) a.setQuantidade(Double.parseDouble(fQtd.getText().strip().replace(",", ".")));
-                    if (!fPreco.getText().isBlank()) a.setPrecoPorCota(Double.parseDouble(fPreco.getText().strip().replace(",", ".")));
+                    if (!fQtd.getText().isBlank()) aporte.setQuantidade(Double.parseDouble(fQtd.getText().strip().replace(",", ".")));
+                    if (!fPreco.getText().isBlank()) aporte.setPrecoPorCota(Double.parseDouble(fPreco.getText().strip().replace(",", ".")));
                 }
-                aporteRepo.salvar(a);
+                aporteRepo.salvar(aporte);
             } catch (NumberFormatException ex) {
                 errLabel.setText("Valores inválidos."); e.consume();
             }

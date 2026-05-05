@@ -49,7 +49,7 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         btnVac.setOnAction(e -> { new VacFormDialog(inv, vacRepo, cotacaoSvc).showAndWait(); construir(); });
         Button btnOp = new Button("+ Operação");
         btnOp.getStyleClass().add("btn-primary");
-        btnOp.setOnAction(e -> { new AporteRvFormDialog(inv, aporteRepo).showAndWait(); construir(); });
+        btnOp.setOnAction(e -> { new AporteRvFormDialog(inv, new AporteRv(), aporteRepo).showAndWait(); construir(); });
         header.getChildren().addAll(btnVoltar, title, spacer, btnVac, btnOp);
         setTop(header);
 
@@ -115,19 +115,41 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         TableColumn<AporteRv, String> cValor = new TableColumn<>("Valor");
         cValor.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(c.getValue().getValor())));
         cValor.setPrefWidth(120);
+        cValor.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null || getTableRow().getItem() == null) {
+                    setText(null); setStyle(""); return;
+                }
+                boolean entrada = getTableRow().getItem().getTipoOp() != TipoOperacaoRv.VENDA;
+                setText(item + (entrada ? " ▲" : " ▼"));
+                setStyle("-fx-text-fill: " + (entrada ? "#2e7d32" : "#c62828") + ";");
+            }
+        });
 
         TableColumn<AporteRv, Void> cAcoes = new TableColumn<>("Ações");
-        cAcoes.setPrefWidth(80);
+        cAcoes.setPrefWidth(150);
         cAcoes.setCellFactory(tc -> new TableCell<>() {
-            final Button del = new Button("🗑");
-            { del.getStyleClass().add("btn-icon"); del.setStyle("-fx-text-fill: #c62828;");
-              del.setOnAction(e -> {
-                  AporteRv a = getTableView().getItems().get(getIndex());
-                  Alert conf = new Alert(Alert.AlertType.CONFIRMATION, "Remover operação?", ButtonType.YES, ButtonType.NO);
-                  conf.showAndWait().filter(r -> r == ButtonType.YES).ifPresent(r -> { aporteRepo.deletar(a.getId()); construir(); });
-              });
+            final Button edit = new Button("✏ Editar");
+            final Button del  = new Button("🗑 Excluir");
+            {
+                edit.getStyleClass().add("btn-secondary");
+                del.getStyleClass().add("btn-danger");
+                edit.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
+                del.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
+                edit.setOnAction(e -> {
+                    AporteRv a = getTableView().getItems().get(getIndex());
+                    new AporteRvFormDialog(inv, a, aporteRepo).showAndWait();
+                    construir();
+                });
+                del.setOnAction(e -> {
+                    AporteRv a = getTableView().getItems().get(getIndex());
+                    Alert conf = new Alert(Alert.AlertType.CONFIRMATION, "Remover operação?", ButtonType.YES, ButtonType.NO);
+                    conf.showAndWait().filter(r -> r == ButtonType.YES).ifPresent(r -> { aporteRepo.deletar(a.getId()); construir(); });
+                });
             }
-            @Override protected void updateItem(Void v, boolean empty) { super.updateItem(v, empty); setGraphic(empty ? null : del); }
+            @Override protected void updateItem(Void v, boolean empty) { super.updateItem(v, empty); setGraphic(empty ? null : new HBox(6, edit, del)); }
         });
 
         opTable.getColumns().addAll(cPer, cTipo, cQtd, cPreco, cValor, cAcoes);

@@ -1,6 +1,5 @@
 package br.investimentos.ui.dolar;
 
-import br.investimentos.model.CotacaoDolar;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.Movimentacao;
 import br.investimentos.model.enums.TipoMovimentacao;
@@ -15,8 +14,9 @@ import java.time.LocalDate;
 
 public class DolarMovFormDialog extends Dialog<Void> {
 
-    public DolarMovFormDialog(Investimento inv, MovimentacaoRepository movRepo) {
-        setTitle("Movimentação USD — " + inv.getNome());
+    public DolarMovFormDialog(Investimento inv, Movimentacao mov, MovimentacaoRepository movRepo) {
+        boolean isEdit = mov.getId() != 0;
+        setTitle((isEdit ? "Editar" : "Nova") + " Movimentação USD — " + inv.getNome());
         initModality(Modality.APPLICATION_MODAL);
 
         LocalDate hoje = LocalDate.now();
@@ -27,15 +27,12 @@ public class DolarMovFormDialog extends Dialog<Void> {
 
         ComboBox<TipoMovimentacao> fTipo = new ComboBox<>();
         fTipo.getItems().addAll(TipoMovimentacao.values());
-        fTipo.setValue(TipoMovimentacao.DEPOSITO);
         addRow(form, 0, "Tipo *", fTipo);
 
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
-        fMes.setValue(hoje.getMonthValue());
         TextField fAno = new TextField(); fAno.setPrefWidth(70);
         InputUtil.applyIntegerFilter(fAno);
-        fAno.setText(String.valueOf(hoje.getYear()));
         HBox perBox = new HBox(8, fMes, new Label("/ "), fAno);
         perBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         addRow(form, 1, "Período", perBox);
@@ -53,10 +50,20 @@ public class DolarMovFormDialog extends Dialog<Void> {
         TextField fNotas = new TextField(); fNotas.setPromptText("Observações");
         addRow(form, 4, "Notas", fNotas);
 
+        // Pre-fill para edição
+        fTipo.setValue(isEdit && mov.getTipoMov() != null ? mov.getTipoMov() : TipoMovimentacao.DEPOSITO);
+        fMes.setValue(isEdit && mov.getPeriodoMes() != 0 ? mov.getPeriodoMes() : hoje.getMonthValue());
+        fAno.setText(isEdit && mov.getPeriodoAno() != 0 ? String.valueOf(mov.getPeriodoAno()) : String.valueOf(hoje.getYear()));
+        if (isEdit) {
+            if (mov.getValor() != 0) fValor.setText(String.valueOf(mov.getValor()).replace(".", ","));
+            if (mov.getCotacaoDolar() != null) fCot.setText(String.valueOf(mov.getCotacaoDolar()).replace(".", ","));
+            fNotas.setText(mov.getNotas() != null ? mov.getNotas() : "");
+        }
+
         Label errLabel = new Label(); errLabel.setStyle("-fx-text-fill: #c62828;");
         getDialogPane().setContent(new VBox(8, form, errLabel));
 
-        ButtonType btnSalvar = new ButtonType("Registrar", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnSalvar = new ButtonType("Salvar", ButtonBar.ButtonData.OK_DONE);
         getDialogPane().getButtonTypes().addAll(btnSalvar, ButtonType.CANCEL);
 
         ((Button) getDialogPane().lookupButton(btnSalvar)).addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
@@ -65,15 +72,13 @@ public class DolarMovFormDialog extends Dialog<Void> {
                 int ano = Integer.parseInt(fAno.getText().strip());
                 double valor = Double.parseDouble(fValor.getText().strip().replace(",", "."));
 
-                Movimentacao m = new Movimentacao();
-                m.setInvestimentoId(inv.getId());
-                m.setTipoMov(fTipo.getValue());
-                m.setPeriodoMes(mes); m.setPeriodoAno(ano);
-                m.setValor(valor);
-                if (!fCot.getText().isBlank())
-                    m.setCotacaoDolar(Double.parseDouble(fCot.getText().strip().replace(",", ".")));
-                m.setNotas(fNotas.getText().strip().isEmpty() ? null : fNotas.getText().strip());
-                movRepo.salvar(m);
+                mov.setInvestimentoId(inv.getId());
+                mov.setTipoMov(fTipo.getValue());
+                mov.setPeriodoMes(mes); mov.setPeriodoAno(ano);
+                mov.setValor(valor);
+                mov.setCotacaoDolar(!fCot.getText().isBlank() ? Double.parseDouble(fCot.getText().strip().replace(",", ".")) : null);
+                mov.setNotas(fNotas.getText().strip().isEmpty() ? null : fNotas.getText().strip());
+                movRepo.salvar(mov);
             } catch (NumberFormatException ex) {
                 errLabel.setText("Valores inválidos."); e.consume();
             }
