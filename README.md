@@ -1,3 +1,10 @@
+> **⚠ DISCLAIMER**
+> Este aplicativo foi desenvolvido **exclusivamente por Inteligência Artificial** (Claude - Anthropic), sem revisão manual do código gerado.
+> Por esse motivo, é possível que existam **erros de lógica, bugs, falhas de segurança e vulnerabilidades** não detectadas.
+> **Use por sua conta e risco.** Não utilize em ambiente de produção nem para armazenar dados financeiros sensíveis sem antes realizar uma auditoria de segurança independente.
+
+---
+
 # Sifin — Painel de Investimentos
 
 Aplicação desktop **open source** para controle individual de investimentos pessoais.
