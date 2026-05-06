@@ -2,6 +2,7 @@ package br.investimentos.ui.util;
 
 import javafx.scene.Node;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
 
 import java.util.LinkedHashMap;
@@ -48,6 +49,11 @@ public final class GlossarioTooltip {
         SIGLAS.put("LEA",   "LEA — Lucro/Prejuízo Estimado Acumulado\n= LEB + Dividendos");
         SIGLAS.put("LEA %", "LEA % — Rentabilidade Acumulada com Dividendos\n= (LEA / VTP) × 100");
         SIGLAS.put("D",     "D — Dividendos\n= Σ valores de todos os dividendos recebidos");
+        // ── Gastos ───────────────────────────────────────────────────────
+        SIGLAS.put("GAT",   "GAT — Gastos Alimentares\n= Σ gastos da categoria Alimentar no período");
+        SIGLAS.put("GDT",   "GDT — Gastos Diversos\n= Σ gastos da categoria Diversos no período");
+        SIGLAS.put("GMT",   "GMT — Gastos em Mensalidades\n= Σ gastos da categoria Mensalidades no período");
+        SIGLAS.put("GT",    "GT — Gastos Totais\n= GAT + GDT + GMT");
     }
 
     private GlossarioTooltip() {}
@@ -71,7 +77,7 @@ public final class GlossarioTooltip {
                     || labelText.contains("(" + s + ")")) {
                 Tooltip tip = new Tooltip(entry.getValue());
                 tip.setShowDelay(Duration.millis(350));
-                tip.setHideDelay(Duration.seconds(10));
+                tip.setHideDelay(Duration.ZERO);
                 tip.setWrapText(true);
                 tip.setMaxWidth(300);
                 tip.setStyle(
@@ -83,6 +89,10 @@ public final class GlossarioTooltip {
                         "-fx-padding: 8 12;"
                 );
                 Tooltip.install(node, tip);
+                node.addEventHandler(MouseEvent.MOUSE_EXITED, e -> tip.hide());
+                node.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+                    if (!isFocused) tip.hide();
+                });
                 return;
             }
         }

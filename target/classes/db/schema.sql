@@ -92,6 +92,9 @@ CREATE TABLE IF NOT EXISTS gastos (
     periodo_ano INTEGER NOT NULL,
     valor REAL NOT NULL,
     notas TEXT,
+    parcelas_total INTEGER DEFAULT 1,
+    parcela_numero INTEGER DEFAULT 1,
+    grupo_parcela TEXT,
     criado_em TEXT DEFAULT (datetime('now','localtime'))
 );
 

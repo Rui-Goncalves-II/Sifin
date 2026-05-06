@@ -5,17 +5,14 @@ import br.investimentos.repository.*;
 import br.investimentos.service.*;
 import br.investimentos.ui.MainWindow;
 import javafx.application.Application;
-import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        // Inicializa banco e schema
         DatabaseManager db = DatabaseManager.getInstance();
 
-        // Repositórios
         var invRepo   = new InvestimentoRepository();
         var movRepo   = new MovimentacaoRepository();
         var aporteRepo= new AporteRvRepository();
@@ -25,7 +22,6 @@ public class Main extends Application {
         var cotaRepo  = new CotacaoRepository();
         var gastoRepo = new GastoRepository();
 
-        // Serviços
         var taxaSvc      = new TaxaService();
         var rendSvc      = new RendimentoService(vaiRepo, movRepo, vtaRepo);
         var rvSvc        = new RendaVariavelService(aporteRepo, vacRepo);
@@ -34,13 +30,11 @@ public class Main extends Application {
         var vaiSvc       = new VaiService(invRepo, vaiRepo, vtaRepo, db);
         var alertaSvc    = new AlertaService(invRepo, vtaRepo, vacRepo);
         var consolSvc    = new ConsolidacaoService(invRepo, movRepo, vtaRepo, aporteRepo, vacRepo, rendSvc, rvSvc);
-        var cotacaoSvc   = new CotacaoService(cotaRepo, vacRepo);
+        var cotacaoSvc   = new CotacaoService(cotaRepo);
         var gastosSvc    = new GastosService(gastoRepo);
 
-        // Virada de ano na primeira abertura de jan
         vaiSvc.virarAno();
 
-        // Janela principal
         MainWindow window = new MainWindow(
                 primaryStage, invRepo, movRepo, aporteRepo, vtaRepo, vacRepo, vaiRepo,
                 gastoRepo,
@@ -51,9 +45,7 @@ public class Main extends Application {
     }
 
     @Override
-    public void stop() {
-        // serviços com recursos serão encerrados via referências se necessário
-    }
+    public void stop() {}
 
     public static void main(String[] args) {
         launch(args);

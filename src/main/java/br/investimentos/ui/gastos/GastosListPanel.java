@@ -60,16 +60,25 @@ public class GastosListPanel extends BorderPane {
 
         TableColumn<Gasto, String> cDesc = new TableColumn<>("Descrição");
         cDesc.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getDescricao()));
-        cDesc.setPrefWidth(220);
+        cDesc.setPrefWidth(200);
 
         TableColumn<Gasto, String> cPer = new TableColumn<>("Período");
         cPer.setCellValueFactory(c -> new SimpleStringProperty(
                 FormatUtil.mesAno(c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
         cPer.setPrefWidth(90);
 
+        TableColumn<Gasto, String> cParc = new TableColumn<>("Parcela");
+        cParc.setCellValueFactory(c -> {
+            Gasto g = c.getValue();
+            if (!g.isParcelado()) return new SimpleStringProperty("—");
+            return new SimpleStringProperty(g.getParcelaNumero() + "/" + g.getParcelasTotal());
+        });
+        cParc.setPrefWidth(70);
+        cParc.setStyle("-fx-alignment: CENTER;");
+
         TableColumn<Gasto, String> cValor = new TableColumn<>("Valor");
         cValor.setCellValueFactory(c -> new SimpleStringProperty(FormatUtil.brl(c.getValue().getValor())));
-        cValor.setPrefWidth(120);
+        cValor.setPrefWidth(110);
         cValor.setStyle("-fx-alignment: CENTER-RIGHT;");
 
         TableColumn<Gasto, String> cNotas = new TableColumn<>("Notas");
@@ -95,7 +104,7 @@ public class GastosListPanel extends BorderPane {
             }
         });
 
-        t.getColumns().addAll(cDesc, cPer, cValor, cNotas, cAcoes);
+        t.getColumns().addAll(cDesc, cPer, cParc, cValor, cNotas, cAcoes);
         return t;
     }
 
@@ -106,14 +115,48 @@ public class GastosListPanel extends BorderPane {
     }
 
     private void excluir(Gasto g) {
+        if (g.isParcelado()) {
+            excluirParcelado(g);
+        } else {
+            excluirSimples(g);
+        }
+    }
+
+    private void excluirSimples(Gasto g) {
         Optional<ButtonType> res = new Alert(Alert.AlertType.CONFIRMATION,
                 "Excluir o gasto \"" + g.getDescricao() + "\" de " + FormatUtil.brl(g.getValor()) + "?",
                 ButtonType.YES, ButtonType.NO).showAndWait();
         if (res.isPresent() && res.get() == ButtonType.YES) {
             repo.deletar(g.getId());
-            carregar();
-            if (onAtualizado != null) onAtualizado.run();
+            atualizar();
         }
+    }
+
+    private void excluirParcelado(Gasto g) {
+        ButtonType soParcela = new ButtonType("Só esta parcela", ButtonBar.ButtonData.LEFT);
+        ButtonType todasParcelas = new ButtonType("Todas as parcelas", ButtonBar.ButtonData.LEFT);
+        ButtonType cancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        Alert dlg = new Alert(Alert.AlertType.CONFIRMATION);
+        dlg.setTitle("Excluir parcela");
+        dlg.setHeaderText("\"" + g.getDescricao() + "\" — parcela " + g.getParcelaNumero() + "/" + g.getParcelasTotal());
+        dlg.setContentText("Deseja excluir apenas esta parcela ou todas as " + g.getParcelasTotal() + " parcelas?");
+        dlg.getButtonTypes().setAll(soParcela, todasParcelas, cancelar);
+
+        Optional<ButtonType> res = dlg.showAndWait();
+        if (res.isEmpty() || res.get() == cancelar) return;
+
+        if (res.get() == todasParcelas) {
+            repo.deletarGrupo(g.getGrupoParcela());
+        } else {
+            repo.deletar(g.getId());
+        }
+        atualizar();
+    }
+
+    private void atualizar() {
+        carregar();
+        if (onAtualizado != null) onAtualizado.run();
     }
 
     public void carregar() {

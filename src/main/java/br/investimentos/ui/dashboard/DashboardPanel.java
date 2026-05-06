@@ -5,6 +5,7 @@ import br.investimentos.model.Investimento;
 import br.investimentos.model.enums.TipoInvestimento;
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
+import br.investimentos.service.GastosService.ResumoMensal;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.GlossarioTooltip;
 import javafx.application.Platform;
@@ -44,6 +45,7 @@ public class DashboardPanel extends BorderPane {
     private final ConsolidacaoService consolSvc;
     private final CotacaoService cotacaoSvc;
     private final AlertaService alertaSvc;
+    private final GastosService gastosSvc;
     private final Consumer<Node> navigate;
 
     private Label usdLabel;
@@ -58,11 +60,12 @@ public class DashboardPanel extends BorderPane {
                           VacMensalRepository vacRepo, RendimentoService rendSvc,
                           RendaVariavelService rvSvc, SaldoService saldoSvc,
                           ConsolidacaoService consolSvc, CotacaoService cotacaoSvc,
-                          AlertaService alertaSvc, Consumer<Node> navigate) {
+                          AlertaService alertaSvc, GastosService gastosSvc, Consumer<Node> navigate) {
         this.invRepo = invRepo; this.movRepo = movRepo; this.aporteRepo = aporteRepo;
         this.vtaRepo = vtaRepo; this.vacRepo = vacRepo; this.rendSvc = rendSvc;
         this.rvSvc = rvSvc; this.saldoSvc = saldoSvc; this.consolSvc = consolSvc;
-        this.cotacaoSvc = cotacaoSvc; this.alertaSvc = alertaSvc; this.navigate = navigate;
+        this.cotacaoSvc = cotacaoSvc; this.alertaSvc = alertaSvc;
+        this.gastosSvc = gastosSvc; this.navigate = navigate;
 
         anoSelecionado = LocalDate.now().getYear();
         construir();
@@ -138,20 +141,30 @@ public class DashboardPanel extends BorderPane {
         LocalDate hoje = LocalDate.now();
         double aporteMes = consolSvc.calcularAportesDoMes(hoje.getMonthValue(), hoje.getYear(), tiposFiltro);
 
+        int gastoAno = anoSelecionado == ConsolidacaoService.ANO_TODOS ? GastosService.ANO_TODOS : anoSelecionado;
+        double gt  = gastosSvc.calcularGT(gastoAno);
+        double gat = gastosSvc.calcularGAT(gastoAno);
+        double gdt = gastosSvc.calcularGDT(gastoAno);
+        double gmt = gastosSvc.calcularGMT(gastoAno);
+        List<ResumoMensal> gastosPorMes = gastosSvc.calcularPorMes(gastoAno);
+
         contentBox.getChildren().clear();
 
         atualizarAlertas();
         contentBox.getChildren().add(alertBox);
         contentBox.getChildren().add(buildPillsBar(r, dolarTotal));
         contentBox.getChildren().add(buildKpiGrid(r, aporteMes, hoje, ptaTotal));
+        contentBox.getChildren().add(buildGastosKpiRow(gt, gat, gdt, gmt));
 
         HBox rendRow = buildRendimentoCard(r);
         if (!rendRow.getChildren().isEmpty()) contentBox.getChildren().add(rendRow);
 
+        contentBox.getChildren().add(buildMiniTypeCards(r, dolarTotal));
         contentBox.getChildren().add(buildCharts(r, dolarTotal));
         contentBox.getChildren().add(buildPatrimonioChart(dolarBrl));
-        contentBox.getChildren().add(buildMiniTypeCards(r, dolarTotal));
+        if (!gastosPorMes.isEmpty()) contentBox.getChildren().add(buildGastosChart(gastosPorMes));
         contentBox.getChildren().add(buildExtratoTable(dolarBrl));
+        contentBox.getChildren().add(buildGastosTable(gastosPorMes));
         contentBox.getChildren().add(buildAssetsCard(ptaTotal));
     }
 
@@ -742,6 +755,168 @@ public class DashboardPanel extends BorderPane {
         VBox box = new VBox(wrapper);
         box.getStyleClass().add("card");
         box.setPadding(Insets.EMPTY);
+        return box;
+    }
+
+    // ── Gastos KPI row ───────────────────────────────────────────────────
+
+    private HBox buildGastosKpiRow(double gt, double gat, double gdt, double gmt) {
+        VBox kGT  = makeKpiCard("Gastos Totais", FormatUtil.brl(gt),  "GT",  "neutral", "#f0883e");
+        VBox kGAT = makeKpiCard("Alimentar",     FormatUtil.brl(gat), "GAT", "neutral", "#e3b341");
+        VBox kGDT = makeKpiCard("Diversos",      FormatUtil.brl(gdt), "GDT", "neutral", "#58a6ff");
+        VBox kGMT = makeKpiCard("Mensalidades",  FormatUtil.brl(gmt), "GMT", "neutral", "#bc8cff");
+        HBox row = new HBox(12, kGT, kGAT, kGDT, kGMT);
+        for (VBox c : new VBox[]{kGT, kGAT, kGDT, kGMT}) {
+            c.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(c, Priority.ALWAYS);
+        }
+        return row;
+    }
+
+    private VBox buildGastosChart(List<ResumoMensal> dados) {
+        java.awt.Color bgCard  = new java.awt.Color(0x16, 0x1b, 0x22);
+        java.awt.Color border  = new java.awt.Color(0x2a, 0x34, 0x41);
+        java.awt.Color textMut = new java.awt.Color(0x7d, 0x8f, 0xa0);
+        java.awt.Color amber   = new java.awt.Color(0xe3, 0xb3, 0x41);
+        java.awt.Color blue    = new java.awt.Color(0x58, 0xa6, 0xff);
+        java.awt.Color purple  = new java.awt.Color(0xbc, 0x8c, 0xff);
+        java.awt.Color orange  = new java.awt.Color(0xf0, 0x88, 0x3e);
+        java.awt.Font  fontXs  = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10);
+        java.awt.Font  fontBold= new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+        java.awt.BasicStroke stroke = new java.awt.BasicStroke(
+                1.5f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND);
+        java.awt.geom.Ellipse2D.Double dot = new java.awt.geom.Ellipse2D.Double(-4, -4, 8, 8);
+
+        java.awt.Color[] colors = {amber, blue, purple, orange};
+
+        DefaultCategoryDataset ds = new DefaultCategoryDataset();
+        for (ResumoMensal r : dados) {
+            String lbl = FormatUtil.mesAno(r.mes(), r.ano());
+            ds.addValue(r.alimentar(),   "Alimentar",    lbl);
+            ds.addValue(r.diverso(),     "Diversos",     lbl);
+            ds.addValue(r.mensalidade(), "Mensalidades", lbl);
+            ds.addValue(r.total(),       "Total",        lbl);
+        }
+
+        org.jfree.chart.axis.CategoryAxis xAxis = new org.jfree.chart.axis.CategoryAxis(null);
+        xAxis.setTickLabelPaint(textMut); xAxis.setTickLabelFont(fontXs);
+        xAxis.setAxisLinePaint(border);   xAxis.setTickMarkPaint(border);
+
+        org.jfree.chart.axis.NumberAxis yAxis = new org.jfree.chart.axis.NumberAxis("R$");
+        yAxis.setTickLabelPaint(textMut); yAxis.setTickLabelFont(fontXs);
+        yAxis.setAxisLinePaint(border);   yAxis.setTickMarkPaint(border);
+        yAxis.setLabelPaint(textMut);
+        yAxis.setLabelFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 11));
+        yAxis.setAutoRangeIncludesZero(true);
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer renderer =
+            new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
+                @Override public java.awt.Paint getItemPaint(int row, int col) { return colors[row]; }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) { return colors[row]; }
+            };
+        renderer.setDefaultLinesVisible(true);
+        renderer.setDefaultShapesVisible(true);
+        renderer.setDefaultShapesFilled(true);
+        renderer.setUseFillPaint(true);
+        renderer.setDefaultShape(dot);
+        renderer.setDefaultStroke(stroke);
+        // linha do Total um pouco mais grossa para destacar
+        renderer.setSeriesStroke(3, new java.awt.BasicStroke(
+                2.2f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+
+        org.jfree.chart.plot.CategoryPlot plot = new org.jfree.chart.plot.CategoryPlot(ds, xAxis, yAxis, renderer);
+        plot.setBackgroundPaint(bgCard);
+        plot.setOutlinePaint(border);
+        plot.setRangeGridlinePaint(border);
+        plot.setDomainGridlinesVisible(false);
+
+        JFreeChart chart = new JFreeChart("Gastos por Mês", fontBold, plot, true);
+        chart.setBackgroundPaint(bgCard);
+        chart.setBorderVisible(false);
+        chart.getTitle().setPaint(textMut);
+        chart.getTitle().setFont(fontBold);
+
+        org.jfree.chart.title.LegendTitle legend = chart.getLegend();
+        if (legend != null) {
+            legend.setBackgroundPaint(bgCard);
+            legend.setItemPaint(textMut);
+            legend.setItemFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 11));
+        }
+
+        SwingNode node = new SwingNode();
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(chart);
+            cp.setBackground(bgCard);
+            node.setContent(cp);
+        });
+
+        StackPane wrapper = new StackPane(node);
+        wrapper.setPrefHeight(240);
+
+        VBox box = new VBox(wrapper);
+        box.getStyleClass().add("card");
+        box.setPadding(Insets.EMPTY);
+        return box;
+    }
+
+    private VBox buildGastosTable(List<ResumoMensal> dados) {
+        TableView<ResumoMensal> table = new TableView<>();
+        table.getStyleClass().add("table-view");
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setPlaceholder(new Label("Sem gastos no período selecionado."));
+
+        TableColumn<ResumoMensal, String> cData = new TableColumn<>("Data");
+        cData.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.mesAno(c.getValue().mes(), c.getValue().ano())));
+        cData.setPrefWidth(colW("Data", 90));
+
+        TableColumn<ResumoMensal, String> cAli = new TableColumn<>("Alimentar");
+        cAli.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(c.getValue().alimentar())));
+        cAli.setStyle("-fx-alignment: CENTER-RIGHT;");
+        cAli.setPrefWidth(colW("Alimentar", 120));
+
+        TableColumn<ResumoMensal, String> cDiv = new TableColumn<>("Diversos");
+        cDiv.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(c.getValue().diverso())));
+        cDiv.setStyle("-fx-alignment: CENTER-RIGHT;");
+        cDiv.setPrefWidth(colW("Diversos", 120));
+
+        TableColumn<ResumoMensal, String> cMen = new TableColumn<>("Mensalidade");
+        cMen.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(c.getValue().mensalidade())));
+        cMen.setStyle("-fx-alignment: CENTER-RIGHT;");
+        cMen.setPrefWidth(colW("Mensalidade", 120));
+
+        TableColumn<ResumoMensal, String> cTot = new TableColumn<>("Total");
+        cTot.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(c.getValue().total())));
+        cTot.setStyle("-fx-alignment: CENTER-RIGHT;");
+        cTot.setPrefWidth(colW("Total", 120));
+        cTot.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setStyle(""); return; }
+                setText(item);
+                setStyle("-fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;");
+            }
+        });
+
+        table.getColumns().addAll(cData, cAli, cDiv, cMen, cTot);
+        table.getItems().addAll(dados);
+
+        int rowH = 32, headerH = 30;
+        if (anoSelecionado == ConsolidacaoService.ANO_TODOS) {
+            table.setPrefHeight(10 * rowH + headerH);
+        } else {
+            table.setPrefHeight(12 * rowH + headerH);
+            table.setMinHeight(12 * rowH + headerH);
+        }
+
+        Label titleLbl = new Label("Gastos por Mês");
+        titleLbl.getStyleClass().add("section-title");
+        VBox box = new VBox(8, titleLbl, table);
+        box.getStyleClass().add("card");
         return box;
     }
 

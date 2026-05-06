@@ -41,7 +41,6 @@ public class RendaVariavelListPanel extends BorderPane {
         title.getStyleClass().add("page-title");
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // Subtipo filter
         ComboBox<String> filtro = new ComboBox<>();
         filtro.getItems().addAll("Todos", "FII", "ACAO", "ETF");
         filtro.setValue("Todos");
@@ -112,7 +111,6 @@ public class RendaVariavelListPanel extends BorderPane {
                         getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, navigate)));
                 btnOp.setOnAction(e -> {
                     new RendaVariavelFormDialog(getTableView().getItems().get(getIndex()), invRepo).showAndWait();
-                    // para operações (compra/venda/dividendo) abre o detalhe
                     navigate.accept(new RendaVariavelDetalhePanel(
                             getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, navigate));
                 });

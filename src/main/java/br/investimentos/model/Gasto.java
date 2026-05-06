@@ -10,7 +10,12 @@ public class Gasto {
     private int periodoAno;
     private double valor;
     private String notas;
+    private int parcelasTotal = 1;
+    private int parcelaNumero = 1;
+    private String grupoParcela;
     private String criadoEm;
+
+    public boolean isParcelado() { return parcelasTotal > 1; }
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -26,6 +31,12 @@ public class Gasto {
     public void setValor(double valor) { this.valor = valor; }
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }
+    public int getParcelasTotal() { return parcelasTotal; }
+    public void setParcelasTotal(int parcelasTotal) { this.parcelasTotal = parcelasTotal; }
+    public int getParcelaNumero() { return parcelaNumero; }
+    public void setParcelaNumero(int parcelaNumero) { this.parcelaNumero = parcelaNumero; }
+    public String getGrupoParcela() { return grupoParcela; }
+    public void setGrupoParcela(String grupoParcela) { this.grupoParcela = grupoParcela; }
     public String getCriadoEm() { return criadoEm; }
     public void setCriadoEm(String criadoEm) { this.criadoEm = criadoEm; }
 }

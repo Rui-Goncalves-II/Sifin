@@ -23,6 +23,7 @@ public class DatabaseManager {
         File dbFile = new File(dataDir, "investimentos.db");
         url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
         initSchema();
+        runMigrations();
     }
 
     public static synchronized DatabaseManager getInstance() {
@@ -37,6 +38,22 @@ public class DatabaseManager {
             st.execute("PRAGMA journal_mode = WAL");
         }
         return conn;
+    }
+
+    private void runMigrations() {
+        String[] cols = {
+            "ALTER TABLE gastos ADD COLUMN parcelas_total INTEGER DEFAULT 1",
+            "ALTER TABLE gastos ADD COLUMN parcela_numero INTEGER DEFAULT 1",
+            "ALTER TABLE gastos ADD COLUMN grupo_parcela TEXT"
+        };
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement st = conn.createStatement()) {
+            for (String ddl : cols) {
+                try { st.execute(ddl); } catch (SQLException ignored) {}
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to run migrations", e);
+        }
     }
 
     private void initSchema() {

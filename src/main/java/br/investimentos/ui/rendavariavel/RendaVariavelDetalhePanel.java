@@ -53,7 +53,7 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
         Button btnVac = new Button("Atualizar VAC");
         btnVac.getStyleClass().add("btn-secondary");
-        btnVac.setOnAction(e -> { new VacFormDialog(inv, vacRepo, cotacaoSvc).showAndWait(); construir(); });
+        btnVac.setOnAction(e -> { new VacFormDialog(inv, vacRepo).showAndWait(); construir(); });
         Button btnOp = new Button("+ Operação");
         btnOp.getStyleClass().add("btn-primary");
         btnOp.setOnAction(e -> { new AporteRvFormDialog(inv, new AporteRv(), aporteRepo).showAndWait(); construir(); });
@@ -91,7 +91,6 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         grid.add(metricCard("LEA", FormatUtil.brl(lea), lea >= 0 ? "positive" : "negative"), 2, 1);
         grid.add(metricCard("LEA %", FormatUtil.pct(leaPct), leaPct >= 0 ? "positive" : "negative"), 3, 1);
 
-        // Operações table
         Label opTitle = new Label("Operações");
         opTitle.getStyleClass().add("section-title");
 
@@ -181,7 +180,6 @@ public class RendaVariavelDetalhePanel extends BorderPane {
                 1.5f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND);
         java.awt.geom.Ellipse2D.Double dot = new java.awt.geom.Ellipse2D.Double(-5, -5, 10, 10);
 
-        // ── VAC por Mês ──────────────────────────────────────────────────
         DefaultCategoryDataset vacDs = new DefaultCategoryDataset();
         for (VacMensal v : vacRepo.findByInvestimento(inv.getId()))
             vacDs.addValue(v.getVac(), "VAC", FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()));
@@ -217,7 +215,6 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         });
         StackPane vacPane = new StackPane(vacNode); vacPane.setPrefSize(400, 220);
 
-        // ── Dividendos por Período ───────────────────────────────────────
         java.util.Map<String, Double> divMap = new java.util.LinkedHashMap<>();
         aporteRepo.findByInvestimento(inv.getId()).stream()
             .filter(a -> a.getTipoOp() == TipoOperacaoRv.DIVIDENDO)

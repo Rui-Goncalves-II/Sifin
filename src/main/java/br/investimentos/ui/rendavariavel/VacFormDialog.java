@@ -3,8 +3,6 @@ package br.investimentos.ui.rendavariavel;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.VacMensal;
 import br.investimentos.repository.VacMensalRepository;
-import br.investimentos.service.CotacaoService;
-import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
@@ -15,7 +13,7 @@ import java.time.LocalDate;
 
 public class VacFormDialog extends Dialog<Void> {
 
-    public VacFormDialog(Investimento inv, VacMensalRepository vacRepo, CotacaoService cotacaoSvc) {
+    public VacFormDialog(Investimento inv, VacMensalRepository vacRepo) {
         setTitle("Atualizar VAC — " + inv.getNome());
         initModality(Modality.APPLICATION_MODAL);
 
@@ -41,38 +39,11 @@ public class VacFormDialog extends Dialog<Void> {
 
         TextField fVac = new TextField();
         InputUtil.applyDecimalFilter(fVac);
-        fVac.setPromptText("Valor atual por cota");
+        fVac.setPromptText("Ex: 12,50");
         addRow(form, 1, "VAC (R$) *", fVac);
 
-        // Preenche valor existente
-        vacRepo.find(inv.getId(), mesAtual, anoAtual).ifPresent(v -> fVac.setText(String.valueOf(v.getVac())));
-
-        // Botão buscar Brapi
-        String ticker = inv.getNotas(); // ticker armazenado em notas
-        Label brapiInfo = new Label("");
-        brapiInfo.getStyleClass().add("card-label");
-
-        if (ticker != null && !ticker.isBlank()) {
-            Button btnBrapi = new Button("🔄 Buscar via Brapi (" + ticker + ")");
-            btnBrapi.getStyleClass().add("btn-secondary");
-            btnBrapi.setOnAction(e -> {
-                btnBrapi.setDisable(true);
-                btnBrapi.setText("Buscando...");
-                new Thread(() -> {
-                    var result = cotacaoSvc.buscarVacBrapi(ticker, inv.getId(), mesAtual, anoAtual);
-                    javafx.application.Platform.runLater(() -> {
-                        btnBrapi.setDisable(false);
-                        btnBrapi.setText("🔄 Buscar via Brapi (" + ticker + ")");
-                        result.ifPresentOrElse(
-                                v -> { fVac.setText(FormatUtil.numero(v, 2)); brapiInfo.setText("✓ Obtido via Brapi: R$" + FormatUtil.numero(v, 2)); },
-                                () -> brapiInfo.setText("✗ Falha ao buscar. Digite manualmente.")
-                        );
-                    });
-                }).start();
-            });
-            form.add(new VBox(6, btnBrapi, brapiInfo), 1, 2);
-            form.add(new Label(""), 0, 2);
-        }
+        vacRepo.find(inv.getId(), mesAtual, anoAtual).ifPresent(v ->
+                fVac.setText(String.valueOf(v.getVac()).replace(".", ",")));
 
         Label errLabel = new Label();
         errLabel.setStyle("-fx-text-fill: #c62828;");

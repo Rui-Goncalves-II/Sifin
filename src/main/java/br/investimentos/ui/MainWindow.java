@@ -80,14 +80,13 @@ public class MainWindow {
         sidebar.addItem(new SideBar.NavItem("⇄", "Transações", () -> loadPanel(makeTransacoes())));
         sidebar.addSpacer();
 
-        // Navega para o Dashboard por padrão
         loadPanel(makeDashboard());
         sidebar.activateFirst();
     }
 
     private Node makeDashboard() {
         return new DashboardPanel(invRepo, movRepo, aporteRepo, vtaRepo, vacRepo,
-                rendSvc, rvSvc, saldoSvc, consolSvc, cotacaoSvc, alertaSvc, this::loadPanel);
+                rendSvc, rvSvc, saldoSvc, consolSvc, cotacaoSvc, alertaSvc, gastosSvc, this::loadPanel);
     }
 
     private Node makeRendaFixa() {
@@ -153,7 +152,6 @@ public class MainWindow {
         root.setLeft(sidebar);
         root.setCenter(contentArea);
 
-        // StackPane de overlay — suporta toast não-bloqueante sobre o conteúdo
         StackPane rootLayer = new StackPane(root);
 
         Scene scene = new Scene(rootLayer, 1280, 768);
@@ -166,12 +164,10 @@ public class MainWindow {
         stage.show();
 
         cotacaoSvc.iniciarRefreshAutomatico(cot -> Platform.runLater(() -> {
-            // Atualiza o dashboard se estiver visível
             if (!contentArea.getChildren().isEmpty() &&
                     contentArea.getChildren().get(0) instanceof DashboardPanel dp) {
                 dp.onCotacaoAtualizada();
             }
-            // Notificação não-bloqueante
             String msg = "Compra: R$ " + FormatUtil.numero(cot.getValorCompra(), 4)
                        + "   Venda: R$ " + FormatUtil.numero(cot.getValorVenda(), 4);
             Toast.show(rootLayer, "Cotação USD atualizada", msg);

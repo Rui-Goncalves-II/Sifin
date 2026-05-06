@@ -14,7 +14,7 @@ public class GastoRepository {
 
     public Gasto salvar(Gasto g) {
         if (g.getId() == 0) {
-            String sql = "INSERT INTO gastos (tipo,descricao,periodo_mes,periodo_ano,valor,notas) VALUES (?,?,?,?,?,?)";
+            String sql = "INSERT INTO gastos (tipo,descricao,periodo_mes,periodo_ano,valor,notas,parcelas_total,parcela_numero,grupo_parcela) VALUES (?,?,?,?,?,?,?,?,?)";
             try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 bind(ps, g);
                 ps.executeUpdate();
@@ -22,10 +22,10 @@ public class GastoRepository {
                 if (rs.next()) g.setId(rs.getInt(1));
             } catch (SQLException e) { throw new RuntimeException(e); }
         } else {
-            String sql = "UPDATE gastos SET tipo=?,descricao=?,periodo_mes=?,periodo_ano=?,valor=?,notas=? WHERE id=?";
+            String sql = "UPDATE gastos SET tipo=?,descricao=?,periodo_mes=?,periodo_ano=?,valor=?,notas=?,parcelas_total=?,parcela_numero=?,grupo_parcela=? WHERE id=?";
             try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
                 bind(ps, g);
-                ps.setInt(7, g.getId());
+                ps.setInt(10, g.getId());
                 ps.executeUpdate();
             } catch (SQLException e) { throw new RuntimeException(e); }
         }
@@ -39,11 +39,21 @@ public class GastoRepository {
         ps.setInt(4, g.getPeriodoAno());
         ps.setDouble(5, g.getValor());
         ps.setString(6, g.getNotas());
+        ps.setInt(7, g.getParcelasTotal());
+        ps.setInt(8, g.getParcelaNumero());
+        ps.setString(9, g.getGrupoParcela());
     }
 
     public void deletar(int id) {
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement("DELETE FROM gastos WHERE id=?")) {
             ps.setInt(1, id);
+            ps.executeUpdate();
+        } catch (SQLException e) { throw new RuntimeException(e); }
+    }
+
+    public void deletarGrupo(String grupoParcela) {
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement("DELETE FROM gastos WHERE grupo_parcela=?")) {
+            ps.setString(1, grupoParcela);
             ps.executeUpdate();
         } catch (SQLException e) { throw new RuntimeException(e); }
     }
@@ -114,6 +124,9 @@ public class GastoRepository {
         g.setPeriodoAno(rs.getInt("periodo_ano"));
         g.setValor(rs.getDouble("valor"));
         g.setNotas(rs.getString("notas"));
+        g.setParcelasTotal(rs.getInt("parcelas_total"));
+        g.setParcelaNumero(rs.getInt("parcela_numero"));
+        g.setGrupoParcela(rs.getString("grupo_parcela"));
         g.setCriadoEm(rs.getString("criado_em"));
         return g;
     }

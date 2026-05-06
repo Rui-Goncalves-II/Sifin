@@ -106,7 +106,7 @@ public class GastosDashboardPanel extends BorderPane {
     private HBox buildKpiRow(double gt, double gat, double gdt, double gmt) {
         HBox row = new HBox(12);
 
-        VBox kGT  = makeKpiCard("Gastos Totais",      FormatUtil.brl(gt),  "GT",  "#f85149");
+        VBox kGT  = makeKpiCard("Gastos Totais",      FormatUtil.brl(gt),  "GT",  "#f0883e");
         VBox kGAT = makeKpiCard("Gastos Alimentar",   FormatUtil.brl(gat), "GAT", "#e3b341");
         VBox kGDT = makeKpiCard("Gastos Diversos",    FormatUtil.brl(gdt), "GDT", "#58a6ff");
         VBox kGMT = makeKpiCard("Gastos Mensalidades",FormatUtil.brl(gmt), "GMT", "#bc8cff");
@@ -130,7 +130,7 @@ public class GastosDashboardPanel extends BorderPane {
         lbl.getStyleClass().add("kpi-label");
 
         Label val = new Label(value);
-        val.getStyleClass().addAll("kpi-value", "negative");
+        val.getStyleClass().add("kpi-value");
 
         Label sub = new Label(sublabel);
         sub.getStyleClass().add("card-label");
@@ -233,7 +233,7 @@ public class GastosDashboardPanel extends BorderPane {
         java.awt.Color bgCard   = new java.awt.Color(0x16, 0x1b, 0x22);
         java.awt.Color border   = new java.awt.Color(0x2a, 0x34, 0x41);
         java.awt.Color textMut  = new java.awt.Color(0x7d, 0x8f, 0xa0);
-        java.awt.Color red      = new java.awt.Color(0xf8, 0x51, 0x49);
+        java.awt.Color red      = new java.awt.Color(0xf0, 0x88, 0x3e);
         java.awt.Font  fontXs   = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10);
         java.awt.Font  fontBold = new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
         java.awt.BasicStroke stroke = new java.awt.BasicStroke(
@@ -342,7 +342,7 @@ public class GastosDashboardPanel extends BorderPane {
                 super.updateItem(item, empty);
                 if (empty || item == null) { setText(null); setStyle(""); return; }
                 setText(item);
-                setStyle("-fx-text-fill: #f85149; -fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;");
+                setStyle("-fx-alignment: CENTER-RIGHT; -fx-font-weight: bold;");
             }
         });
 
