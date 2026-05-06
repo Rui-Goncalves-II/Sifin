@@ -1,5 +1,6 @@
 > **⚠ DISCLAIMER**
-> Este aplicativo foi desenvolvido **exclusivamente por Inteligência Artificial** (Claude - Anthropic), sem revisão manual do código gerado.
+> Este aplicativo foi desenvolvido **em sua maior parte por Inteligência Artificial** (Claude - Anthropic), como exercício prático de um estudante de Engenharia de Software.
+> O objetivo foi aplicar conhecimento teórico para construir uma ferramenta simples e funcional para uso pessoal — não se trata de um produto comercial.
 > Por esse motivo, é possível que existam **erros de lógica, bugs, falhas de segurança e vulnerabilidades** não detectadas.
 > **Use por sua conta e risco.** Não utilize em ambiente de produção nem para armazenar dados financeiros sensíveis sem antes realizar uma auditoria de segurança independente.
 
