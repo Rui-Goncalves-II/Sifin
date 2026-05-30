@@ -20,14 +20,16 @@ public class RendaVariavelService {
     }
 
     public record Posicao(
-            double vtp,   // valor total pago (só COMPRAs)
-            double qc,    // quantidade corrente (compras - vendas; nunca negativo)
-            double vma,   // valor médio de aquisição
-            double d,     // total dividendos recebidos
-            double vac,   // último VAC conhecido
-            double ptg,   // (vac * qc) + d
-            double leb,   // (vac * qc) - vtp
-            double lebPct // (leb/vtp)*100
+            double vtp,    // valor total pago (só COMPRAs)
+            double qc,     // quantidade corrente (compras - vendas; nunca negativo)
+            double vma,    // valor médio de aquisição
+            double d,      // total dividendos recebidos
+            double vac,    // último VAC conhecido
+            double ptg,    // (vac * qc) + d
+            double leb,    // (vac * qc) - vtp
+            double lebPct, // (leb/vtp)*100
+            double lea,    // leb + d
+            double leaPct  // (lea/vtp)*100
     ) {}
 
     public Posicao calcular(int investimentoId) {
@@ -52,8 +54,10 @@ public class RendaVariavelService {
         double ptg = vac * qc + d;
         double leb = vac * qc - vtp;
         double lebPct = vtp > 0 ? (leb / vtp) * 100 : 0;
+        double lea = leb + d;
+        double leaPct = vtp > 0 ? (lea / vtp) * 100 : 0;
 
-        return new Posicao(vtp, qc, vma, d, vac, ptg, leb, lebPct);
+        return new Posicao(vtp, qc, vma, d, vac, ptg, leb, lebPct, lea, leaPct);
     }
 
     /** VMR = (vac_atual * qc) − (vac_anterior * qc) */

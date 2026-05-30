@@ -87,7 +87,7 @@ public class MainWindow {
     }
 
     private Node makeDashboard() {
-        return new DashboardPanel(invRepo, movRepo, aporteRepo, vtaRepo, vacRepo,
+        return new DashboardPanel(invRepo, aporteRepo, vtaRepo, vacRepo,
                 rendSvc, rvSvc, saldoSvc, consolSvc, cotacaoSvc, alertaSvc, gastosSvc, this::loadPanel);
     }
 
@@ -101,7 +101,7 @@ public class MainWindow {
     }
 
     private Node makeDolar() {
-        return new DolarListPanel(invRepo, movRepo, cotacaoSvc, this::loadPanel);
+        return new DolarListPanel(invRepo, movRepo, consolSvc, cotacaoSvc, this::loadPanel);
     }
 
     private Node makeTransacoes() {

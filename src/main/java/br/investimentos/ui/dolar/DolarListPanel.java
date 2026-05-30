@@ -2,9 +2,9 @@ package br.investimentos.ui.dolar;
 
 import br.investimentos.model.CotacaoDolar;
 import br.investimentos.model.Investimento;
-import br.investimentos.model.enums.TipoMovimentacao;
 import br.investimentos.model.enums.TipoInvestimento;
 import br.investimentos.repository.*;
+import br.investimentos.service.ConsolidacaoService;
 import br.investimentos.service.CotacaoService;
 import br.investimentos.ui.util.FormatUtil;
 import javafx.geometry.Insets;
@@ -19,15 +19,16 @@ public class DolarListPanel extends BorderPane {
 
     private final InvestimentoRepository invRepo;
     private final MovimentacaoRepository movRepo;
+    private final ConsolidacaoService consolSvc;
     private final CotacaoService cotacaoSvc;
     private final Consumer<Node> navigate;
 
     private TableView<Investimento> table;
 
     public DolarListPanel(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
-                           CotacaoService cotacaoSvc, Consumer<Node> navigate) {
+                           ConsolidacaoService consolSvc, CotacaoService cotacaoSvc, Consumer<Node> navigate) {
         this.invRepo = invRepo; this.movRepo = movRepo;
-        this.cotacaoSvc = cotacaoSvc; this.navigate = navigate;
+        this.consolSvc = consolSvc; this.cotacaoSvc = cotacaoSvc; this.navigate = navigate;
         construir();
     }
 
@@ -59,14 +60,14 @@ public class DolarListPanel extends BorderPane {
 
         TableColumn<Investimento, String> colUsd = new TableColumn<>("Saldo USD");
         colUsd.setCellValueFactory(c -> {
-            double usd = calcUsd(c.getValue());
+            double usd = consolSvc.calcularSaldoUsd(c.getValue().getId());
             return new javafx.beans.property.SimpleStringProperty("$ " + FormatUtil.numero(usd, 2));
         });
         colUsd.setPrefWidth(120);
 
         TableColumn<Investimento, String> colBrl = new TableColumn<>("Valor em BRL");
         colBrl.setCellValueFactory(c -> {
-            double usd = calcUsd(c.getValue());
+            double usd = consolSvc.calcularSaldoUsd(c.getValue().getId());
             double cot = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(usd * cot));
         });
@@ -84,7 +85,7 @@ public class DolarListPanel extends BorderPane {
                 btnVer.getStyleClass().add("btn-icon");
                 btnEdit.getStyleClass().add("btn-icon");
                 btnVer.setOnAction(e -> navigate.accept(new DolarDetalhePanel(
-                        getTableView().getItems().get(getIndex()), invRepo, movRepo, cotacaoSvc, navigate)));
+                        getTableView().getItems().get(getIndex()), invRepo, movRepo, consolSvc, cotacaoSvc, navigate)));
                 btnEdit.setOnAction(e -> {
                     new DolarFormDialog(getTableView().getItems().get(getIndex()), invRepo).showAndWait();
                     refresh();
@@ -100,7 +101,7 @@ public class DolarListPanel extends BorderPane {
         table.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2 && table.getSelectionModel().getSelectedItem() != null) {
                 Investimento inv = table.getSelectionModel().getSelectedItem();
-                navigate.accept(new DolarDetalhePanel(inv, invRepo, movRepo, cotacaoSvc, navigate));
+                navigate.accept(new DolarDetalhePanel(inv, invRepo, movRepo, consolSvc, cotacaoSvc, navigate));
             }
         });
 
@@ -109,12 +110,6 @@ public class DolarListPanel extends BorderPane {
         VBox.setVgrow(table, Priority.ALWAYS);
         setCenter(content);
         refresh();
-    }
-
-    private double calcUsd(Investimento inv) {
-        return movRepo.findByInvestimento(inv.getId()).stream()
-                .mapToDouble(m -> m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor())
-                .sum();
     }
 
     private void refresh() {

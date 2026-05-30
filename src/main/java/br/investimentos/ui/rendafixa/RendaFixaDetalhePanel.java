@@ -147,13 +147,8 @@ public class RendaFixaDetalhePanel extends BorderPane {
             sumGrid.add(metricCard(samLabel, FormatUtil.brl(sam), "neutral"), 2, 0);
             sumGrid.add(metricCard("Rendimento (R)", FormatUtil.brl(r), r >= 0 ? "positive" : "negative"), 3, 0);
         } else {
-            double totalAportado = 0;
-            for (Movimentacao m : movRepo.findByInvestimento(inv.getId()))
-                totalAportado += m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor();
-
-            double rTotal = 0;
-            for (int ano : anosComDados())
-                rTotal += vtaRepo.findUltimoDoAno(inv.getId(), ano).map(rendSvc::calcularR).orElse(0.0);
+            double totalAportado = rendSvc.calcularTotalAportado(inv.getId());
+            double rTotal = rendSvc.calcularRTotal(inv.getId(), anosComDados());
 
             String pctStr = (totalAportado > 0)
                     ? FormatUtil.pct(rTotal / totalAportado * 100)

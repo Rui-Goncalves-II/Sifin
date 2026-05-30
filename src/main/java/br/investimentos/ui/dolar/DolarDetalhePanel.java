@@ -6,6 +6,7 @@ import br.investimentos.model.Movimentacao;
 import br.investimentos.model.enums.TipoMovimentacao;
 import br.investimentos.repository.InvestimentoRepository;
 import br.investimentos.repository.MovimentacaoRepository;
+import br.investimentos.service.ConsolidacaoService;
 import br.investimentos.service.CotacaoService;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.GlossarioTooltip;
@@ -26,16 +27,17 @@ public class DolarDetalhePanel extends BorderPane {
     private final Investimento inv;
     private final InvestimentoRepository invRepo;
     private final MovimentacaoRepository movRepo;
+    private final ConsolidacaoService consolSvc;
     private final CotacaoService cotacaoSvc;
     private final Consumer<Node> navigate;
 
     private int anoSelecionado;
 
     public DolarDetalhePanel(Investimento inv, InvestimentoRepository invRepo,
-                              MovimentacaoRepository movRepo, CotacaoService cotacaoSvc,
-                              Consumer<Node> navigate) {
+                              MovimentacaoRepository movRepo, ConsolidacaoService consolSvc,
+                              CotacaoService cotacaoSvc, Consumer<Node> navigate) {
         this.inv = inv; this.invRepo = invRepo; this.movRepo = movRepo;
-        this.cotacaoSvc = cotacaoSvc; this.navigate = navigate;
+        this.consolSvc = consolSvc; this.cotacaoSvc = cotacaoSvc; this.navigate = navigate;
         anoSelecionado = LocalDate.now().getYear();
         construir();
     }
@@ -74,7 +76,7 @@ public class DolarDetalhePanel extends BorderPane {
         header.setAlignment(Pos.CENTER_LEFT);
         Button btnVoltar = new Button("← Voltar");
         btnVoltar.getStyleClass().add("btn-secondary");
-        btnVoltar.setOnAction(e -> navigate.accept(new DolarListPanel(invRepo, movRepo, cotacaoSvc, navigate)));
+        btnVoltar.setOnAction(e -> navigate.accept(new DolarListPanel(invRepo, movRepo, consolSvc, cotacaoSvc, navigate)));
         Label title = new Label("💵 " + inv.getNome());
         title.getStyleClass().add("page-title");
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);

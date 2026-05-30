@@ -87,10 +87,10 @@ public class GastosDashboardPanel extends BorderPane {
     }
 
     public void refresh() {
+        double gt  = svc.calcularGT(anoSelecionado);
         double gat = svc.calcularGAT(anoSelecionado);
         double gdt = svc.calcularGDT(anoSelecionado);
         double gmt = svc.calcularGMT(anoSelecionado);
-        double gt  = gat + gdt + gmt;
         double gmp = svc.calcularGMP();
 
         List<ResumoMensal> porMes = svc.calcularPorMes(anoSelecionado);

@@ -145,10 +145,8 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         grid.add(metricCard("LEB", FormatUtil.brl(pos.leb()), pos.leb() >= 0 ? "positive" : "negative"), 0, 1);
         grid.add(metricCard("LEB %", FormatUtil.pct(pos.lebPct()), pos.lebPct() >= 0 ? "positive" : "negative"), 1, 1);
 
-        double lea = pos.leb() + pos.d();
-        double leaPct = pos.vtp() > 0 ? (lea / pos.vtp()) * 100 : 0;
-        grid.add(metricCard("LEA", FormatUtil.brl(lea), lea >= 0 ? "positive" : "negative"), 2, 1);
-        grid.add(metricCard("LEA %", FormatUtil.pct(leaPct), leaPct >= 0 ? "positive" : "negative"), 3, 1);
+        grid.add(metricCard("LEA", FormatUtil.brl(pos.lea()), pos.lea() >= 0 ? "positive" : "negative"), 2, 1);
+        grid.add(metricCard("LEA %", FormatUtil.pct(pos.leaPct()), pos.leaPct() >= 0 ? "positive" : "negative"), 3, 1);
 
         // Tabela de operações
         String opLabel = (anoSelecionado != ANO_TODOS)

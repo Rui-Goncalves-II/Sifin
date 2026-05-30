@@ -22,6 +22,7 @@ br/investimentos/ui/dashboard/DashboardPanel.class
 br/investimentos/ui/dolar/DolarMovFormDialog.class
 br/investimentos/ui/dolar/DolarDetalhePanel.class
 br/investimentos/service/RendaVariavelService.class
+br/investimentos/service/ConsolidacaoService$1.class
 br/investimentos/service/RendaVariavelService$Posicao.class
 br/investimentos/model/enums/TipoMovimentacao.class
 br/investimentos/Launcher.class

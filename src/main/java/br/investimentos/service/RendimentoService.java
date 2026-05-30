@@ -54,4 +54,21 @@ public class RendimentoService {
         double vi = calcularVi(vta.getInvestimentoId(), vta.getPeriodoAno(), vta.getPeriodoMes());
         return vta.getVta() - vi;
     }
+
+    /** Total histórico de depósitos líquidos (DEPOSITO − SAQUE) de um ativo RF. */
+    public double calcularTotalAportado(int investimentoId) {
+        double total = 0;
+        for (Movimentacao m : movRepo.findByInvestimento(investimentoId))
+            total += m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor();
+        return total;
+    }
+
+    /** Soma de R de todos os anos informados (último VTA de cada ano). */
+    public double calcularRTotal(int investimentoId, List<Integer> anos) {
+        double total = 0;
+        for (int ano : anos)
+            total += vtaRepo.findUltimoDoAno(investimentoId, ano)
+                    .map(this::calcularR).orElse(0.0);
+        return total;
+    }
 }

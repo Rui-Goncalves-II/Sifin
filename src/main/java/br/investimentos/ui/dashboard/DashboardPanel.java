@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 public class DashboardPanel extends BorderPane {
 
     private final InvestimentoRepository invRepo;
-    private final MovimentacaoRepository movRepo;
     private final AporteRvRepository aporteRepo;
     private final VtaMensalRepository vtaRepo;
     private final VacMensalRepository vacRepo;
@@ -54,13 +53,13 @@ public class DashboardPanel extends BorderPane {
     private int anoSelecionado;
     private final Set<TipoInvestimento> tiposFiltro = EnumSet.allOf(TipoInvestimento.class);
 
-    public DashboardPanel(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
+    public DashboardPanel(InvestimentoRepository invRepo,
                           AporteRvRepository aporteRepo, VtaMensalRepository vtaRepo,
                           VacMensalRepository vacRepo, RendimentoService rendSvc,
                           RendaVariavelService rvSvc, SaldoService saldoSvc,
                           ConsolidacaoService consolSvc, CotacaoService cotacaoSvc,
                           AlertaService alertaSvc, GastosService gastosSvc, Consumer<Node> navigate) {
-        this.invRepo = invRepo; this.movRepo = movRepo; this.aporteRepo = aporteRepo;
+        this.invRepo = invRepo; this.aporteRepo = aporteRepo;
         this.vtaRepo = vtaRepo; this.vacRepo = vacRepo; this.rendSvc = rendSvc;
         this.rvSvc = rvSvc; this.saldoSvc = saldoSvc; this.consolSvc = consolSvc;
         this.cotacaoSvc = cotacaoSvc; this.alertaSvc = alertaSvc;
@@ -135,8 +134,8 @@ public class DashboardPanel extends BorderPane {
     private void refresh() {
         ConsolidacaoService.ResultadoConsolidado r = consolSvc.calcular(anoSelecionado, tiposFiltro);
         double dolarBrl = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
-        double dolarTotal = tiposFiltro.contains(TipoInvestimento.DOLAR) ? calcDolarTotal(dolarBrl) : 0.0;
-        double dolarInvestidoBrl = calcDolarInvestidoBrl(anoSelecionado, dolarBrl);
+        double dolarTotal = tiposFiltro.contains(TipoInvestimento.DOLAR) ? consolSvc.calcularDolarTotal(dolarBrl) : 0.0;
+        double dolarInvestidoBrl = consolSvc.calcularDolarInvestidoBrl(anoSelecionado, dolarBrl);
         double ptaTotal = r.pta() + dolarTotal;
         double vtiaTotal = r.vtia() + dolarInvestidoBrl;
         Double pcpaTotal = ptaTotal > 0 ? (r.vtra() / ptaTotal) * 100 : null;
@@ -168,7 +167,7 @@ public class DashboardPanel extends BorderPane {
         if (!gastosPorMes.isEmpty()) contentBox.getChildren().add(buildGastosChart(gastosPorMes));
         contentBox.getChildren().add(buildExtratoTable(dolarBrl));
         contentBox.getChildren().add(buildGastosTable(gastosPorMes));
-        contentBox.getChildren().add(buildAssetsCard(ptaTotal));
+        contentBox.getChildren().add(buildAssetsCard(ptaTotal, dolarBrl));
     }
 
     // ── Pills bar (filter toggles per type) ─────────────────────────────
@@ -568,7 +567,7 @@ public class DashboardPanel extends BorderPane {
 
     // ── Assets table ────────────────────────────────────────────────────
 
-    private VBox buildAssetsCard(double pta) {
+    private VBox buildAssetsCard(double pta, double dolarBrl) {
         TableView<Investimento> table = new TableView<>();
         table.getStyleClass().add("table-view");
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -590,7 +589,7 @@ public class DashboardPanel extends BorderPane {
             double saldo = switch (inv.getTipo()) {
                 case RENDA_FIXA -> saldoSvc.saldoAtual(inv, 0);
                 case RENDA_VARIAVEL -> { var pos = rvSvc.calcular(inv.getId()); yield pos.vac() * pos.qc(); }
-                case DOLAR -> calcDolarAtivo(inv);
+                case DOLAR -> consolSvc.calcularSaldoUsd(inv.getId()) * dolarBrl;
             };
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(saldo));
         });
@@ -604,7 +603,7 @@ public class DashboardPanel extends BorderPane {
             double saldo = switch (inv.getTipo()) {
                 case RENDA_FIXA -> saldoSvc.saldoAtual(inv, 0);
                 case RENDA_VARIAVEL -> { var pos = rvSvc.calcular(inv.getId()); yield pos.vac() * pos.qc(); }
-                case DOLAR -> calcDolarAtivo(inv);
+                case DOLAR -> consolSvc.calcularSaldoUsd(inv.getId()) * dolarBrl;
             };
             double pct = pta > 0 ? saldo / pta * 100 : 0;
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.pct(pct));
@@ -932,49 +931,6 @@ public class DashboardPanel extends BorderPane {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
-
-    private double calcDolarInvestidoBrl(int ano, double cotacaoDolar) {
-        if (!tiposFiltro.contains(TipoInvestimento.DOLAR)) return 0.0;
-        boolean todos = (ano == ConsolidacaoService.ANO_TODOS);
-        double total = 0;
-        for (Investimento inv : invRepo.findByTipo(TipoInvestimento.DOLAR)) {
-            var movs = todos ? movRepo.findByInvestimento(inv.getId())
-                             : movRepo.findByInvestimentoEAno(inv.getId(), ano);
-            for (var mov : movs) {
-                double cot = mov.getCotacaoDolar() != null ? mov.getCotacaoDolar() : cotacaoDolar;
-                total += switch (mov.getTipoMov()) {
-                    case DEPOSITO -> mov.getValor() * cot;
-                    case SAQUE   -> -mov.getValor() * cot;
-                };
-            }
-        }
-        return total;
-    }
-
-    private double calcDolarTotal(double dolarBrl) {
-        double total = 0;
-        for (Investimento inv : invRepo.findByTipo(TipoInvestimento.DOLAR)) {
-            double usd = 0;
-            for (var mov : movRepo.findByInvestimento(inv.getId()))
-                usd += switch (mov.getTipoMov()) {
-                    case DEPOSITO -> mov.getValor();
-                    case SAQUE -> -mov.getValor();
-                };
-            total += usd * dolarBrl;
-        }
-        return total;
-    }
-
-    private double calcDolarAtivo(Investimento inv) {
-        double usd = 0;
-        for (var mov : movRepo.findByInvestimento(inv.getId()))
-            usd += switch (mov.getTipoMov()) {
-                case DEPOSITO -> mov.getValor();
-                case SAQUE -> -mov.getValor();
-            };
-        double cotacao = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
-        return usd * cotacao;
-    }
 
     private void atualizarAlertas() {
         alertBox.getChildren().clear();

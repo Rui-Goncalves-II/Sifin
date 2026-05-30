@@ -444,6 +444,40 @@ public class ConsolidacaoService {
         return Math.max(0, qc);
     }
 
+    /** Saldo USD líquido de um ativo Dólar (DEPOSITO − SAQUE em dólares). */
+    public double calcularSaldoUsd(int investimentoId) {
+        double usd = 0;
+        for (Movimentacao mov : movRepo.findByInvestimento(investimentoId))
+            usd += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
+        return usd;
+    }
+
+    /** Valor total de todos os ativos Dólar convertido para BRL pela cotação atual. */
+    public double calcularDolarTotal(double cotacaoDolar) {
+        double total = 0;
+        for (Investimento inv : invRepo.findByTipo(TipoInvestimento.DOLAR))
+            total += Math.max(0, calcularSaldoUsd(inv.getId())) * cotacaoDolar;
+        return total;
+    }
+
+    /** Valor investido em Dólar convertido para BRL usando a cotação de cada movimentação. */
+    public double calcularDolarInvestidoBrl(int ano, double cotacaoDolar) {
+        boolean todos = (ano == ANO_TODOS);
+        double total = 0;
+        for (Investimento inv : invRepo.findByTipo(TipoInvestimento.DOLAR)) {
+            var movs = todos ? movRepo.findByInvestimento(inv.getId())
+                             : movRepo.findByInvestimentoEAno(inv.getId(), ano);
+            for (var mov : movs) {
+                double cot = mov.getCotacaoDolar() != null ? mov.getCotacaoDolar() : cotacaoDolar;
+                total += switch (mov.getTipoMov()) {
+                    case DEPOSITO -> mov.getValor() * cot;
+                    case SAQUE   -> -mov.getValor() * cot;
+                };
+            }
+        }
+        return total;
+    }
+
     public List<Integer> anosComDados() {
         List<Integer> anos = new ArrayList<>();
         try (Connection c = br.investimentos.db.DatabaseManager.getInstance().getConnection()) {
