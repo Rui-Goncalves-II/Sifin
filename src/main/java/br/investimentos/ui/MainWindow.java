@@ -121,9 +121,12 @@ public class MainWindow {
     }
 
     private void carregarIcones(Stage stage) {
-        try (InputStream s = getClass().getResourceAsStream("/icons/logo-s.png")) {
-            if (s != null) stage.getIcons().add(new Image(s));
-        } catch (IOException ignored) {}
+        for (String res : new String[]{"/icons/logo-s-16.png", "/icons/logo-s-32.png",
+                                       "/icons/logo-s-48.png", "/icons/logo-s-256.png"}) {
+            try (InputStream s = getClass().getResourceAsStream(res)) {
+                if (s != null) stage.getIcons().add(new Image(s));
+            } catch (IOException ignored) {}
+        }
     }
 
     public void show() {
