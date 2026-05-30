@@ -51,6 +51,7 @@ br/investimentos/ui/dashboard/DashboardPanel$1.class
 br/investimentos/Main.class
 br/investimentos/ui/util/FormatUtil.class
 br/investimentos/service/ConsolidacaoService.class
+br/investimentos/ui/util/AtualizacaoDialog.class
 br/investimentos/repository/AporteRvRepository.class
 br/investimentos/ui/dolar/DolarFormDialog.class
 br/investimentos/ui/rendavariavel/RendaVariavelListPanel$1.class

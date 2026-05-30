@@ -12,6 +12,7 @@ import br.investimentos.service.ImportExportService;
 import br.investimentos.ui.transacao.TransacaoPanel;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.service.AtualizacaoService;
+import br.investimentos.ui.util.AtualizacaoDialog;
 import br.investimentos.ui.util.Toast;
 import java.io.IOException;
 import java.io.InputStream;
@@ -149,8 +150,8 @@ public class MainWindow {
 
         var atualizacaoSvc = new AtualizacaoService();
         atualizacaoSvc.verificarAtualizacaoAsync(tagName ->
-            Platform.runLater(() -> Toast.showAtualizacao(
-                rootLayer,
+            Platform.runLater(() -> AtualizacaoDialog.show(
+                stage,
                 atualizacaoSvc.getVersaoAtual(),
                 tagName,
                 AtualizacaoService.getReleaseUrl()

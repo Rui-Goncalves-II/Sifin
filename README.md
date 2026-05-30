@@ -47,22 +47,33 @@ Apenas o **Git** para clonar o repositório. O script de setup instala Java e Ma
 
 ## Instalação — Linux / macOS
 
+### Opção A — Um único comando (recomendado)
+
+Instala o Sifin do zero sem precisar clonar o repositório manualmente:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Rui-Goncalves-II/Sifin/main/setup/bootstrap.sh)
+```
+
+O script clona o repositório em `~/Sifin` e executa o setup completo automaticamente.
+
+### Opção B — Manualmente
+
 ```bash
 # 1. Clone o repositório
 git clone https://github.com/Rui-Goncalves-II/Sifin.git
-cd sifin
+cd Sifin
 
-# 2. Dê permissão e rode o setup
+# 2. Rode o setup
 chmod +x setup/linux/setup.sh
 ./setup/linux/setup.sh
 ```
 
-O script vai:
+O setup vai:
 1. Verificar se o Java 17+ está instalado — instala automaticamente se necessário (via apt, dnf ou pacman)
 2. Verificar se o Maven está instalado — instala automaticamente se necessário
 3. Compilar o projeto e gerar o JAR em `target/`
-4. Criar o script `run.sh` na raiz do projeto
-5. Criar um atalho na **área de trabalho** e no menu de aplicativos
+4. Criar um atalho na **área de trabalho** e no menu de aplicativos
 
 Para iniciar após o setup:
 
