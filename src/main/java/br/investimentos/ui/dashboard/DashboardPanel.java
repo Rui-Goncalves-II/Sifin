@@ -136,9 +136,13 @@ public class DashboardPanel extends BorderPane {
         ConsolidacaoService.ResultadoConsolidado r = consolSvc.calcular(anoSelecionado, tiposFiltro);
         double dolarBrl = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
         double dolarTotal = tiposFiltro.contains(TipoInvestimento.DOLAR) ? calcDolarTotal(dolarBrl) : 0.0;
+        double dolarInvestidoBrl = calcDolarInvestidoBrl(anoSelecionado, dolarBrl);
         double ptaTotal = r.pta() + dolarTotal;
+        double vtiaTotal = r.vtia() + dolarInvestidoBrl;
+        Double pcpaTotal = ptaTotal > 0 ? (r.vtra() / ptaTotal) * 100 : null;
+        Double pratTotal = vtiaTotal > 0 ? (r.vtra() / vtiaTotal) * 100 : null;
         LocalDate hoje = LocalDate.now();
-        double aporteMes = consolSvc.calcularAportesDoAno(anoSelecionado, tiposFiltro);
+        double aporteMes = consolSvc.calcularAportesDoAno(anoSelecionado, tiposFiltro, dolarBrl);
 
         int gastoAno = anoSelecionado == ConsolidacaoService.ANO_TODOS ? GastosService.ANO_TODOS : anoSelecionado;
         double gt  = gastosSvc.calcularGT(gastoAno);
@@ -152,10 +156,10 @@ public class DashboardPanel extends BorderPane {
         atualizarAlertas();
         contentBox.getChildren().add(alertBox);
         contentBox.getChildren().add(buildPillsBar(r, dolarTotal));
-        contentBox.getChildren().add(buildKpiGrid(r, aporteMes, ptaTotal));
+        contentBox.getChildren().add(buildKpiGrid(r, aporteMes, ptaTotal, vtiaTotal));
         contentBox.getChildren().add(buildGastosKpiRow(gt, gat, gdt, gmt));
 
-        HBox rendRow = buildRendimentoCard(r);
+        HBox rendRow = buildRendimentoCard(pcpaTotal, pratTotal, r.todosOsAnos());
         if (!rendRow.getChildren().isEmpty()) contentBox.getChildren().add(rendRow);
 
         contentBox.getChildren().add(buildMiniTypeCards(r, dolarTotal));
@@ -204,14 +208,14 @@ public class DashboardPanel extends BorderPane {
 
     // ── 4 KPI cards ─────────────────────────────────────────────────────
 
-    private HBox buildKpiGrid(ConsolidacaoService.ResultadoConsolidado r, double aporteMes, double ptaTotal) {
+    private HBox buildKpiGrid(ConsolidacaoService.ResultadoConsolidado r, double aporteMes, double ptaTotal, double vtiaTotal) {
         HBox row = new HBox(12);
 
         String gpStyle = r.vtra() >= 0 ? "positive" : "negative";
         String gpColor = r.vtra() >= 0 ? "#3fb950" : "#f85149";
 
         VBox kpi1 = makeKpiCard("Patrimônio Total", FormatUtil.brl(ptaTotal), "PTA", "neutral", "#bc8cff");
-        VBox kpi2 = makeKpiCard("Total Investido", FormatUtil.brl(r.vtia()), "VTIA", "neutral", "#58a6ff");
+        VBox kpi2 = makeKpiCard("Total Investido", FormatUtil.brl(vtiaTotal), "VTIA", "neutral", "#58a6ff");
         VBox kpi3 = makeKpiCard("Ganho / Perda", FormatUtil.brl(r.vtra()), "VTRA", gpStyle, gpColor);
         String aporteLabel = anoSelecionado == ConsolidacaoService.ANO_TODOS
                 ? "Aportado Total" : "Aportado " + anoSelecionado;
@@ -251,24 +255,24 @@ public class DashboardPanel extends BorderPane {
 
     // ── Rendimento card: PCPA + PRAT side by side ───────────────────────
 
-    private HBox buildRendimentoCard(ConsolidacaoService.ResultadoConsolidado r) {
+    private HBox buildRendimentoCard(Double pcpa, Double prat, boolean todosOsAnos) {
         HBox row = new HBox(12);
-        String labelAno = r.todosOsAnos() ? "no histórico total" : "esse ano";
+        String labelAno = todosOsAnos ? "no histórico total" : "esse ano";
 
-        if (r.pcpa() != null) {
-            String color = r.pcpa() >= 0 ? "#3fb950" : "#f85149";
+        if (pcpa != null) {
+            String color = pcpa >= 0 ? "#3fb950" : "#f85149";
             VBox card = makeRendCard("Crescimento Patrimonial",
-                    (r.pcpa() >= 0 ? "▲ " : "▼ ") + FormatUtil.pct(Math.abs(r.pcpa())),
+                    (pcpa >= 0 ? "▲ " : "▼ ") + FormatUtil.pct(Math.abs(pcpa)),
                     "Seu patrimônio cresceu " + labelAno, color);
             card.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(card, Priority.ALWAYS);
             row.getChildren().add(card);
         }
 
-        if (r.prat() != null) {
-            String color = r.prat() >= 0 ? "#3fb950" : "#f85149";
+        if (prat != null) {
+            String color = prat >= 0 ? "#3fb950" : "#f85149";
             VBox card = makeRendCard("Rendimento sobre Investido",
-                    (r.prat() >= 0 ? "▲ " : "▼ ") + FormatUtil.pct(Math.abs(r.prat())),
+                    (prat >= 0 ? "▲ " : "▼ ") + FormatUtil.pct(Math.abs(prat)),
                     "Rendimento sobre o capital aplicado " + labelAno, color);
             card.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(card, Priority.ALWAYS);
@@ -928,6 +932,24 @@ public class DashboardPanel extends BorderPane {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
+
+    private double calcDolarInvestidoBrl(int ano, double cotacaoDolar) {
+        if (!tiposFiltro.contains(TipoInvestimento.DOLAR)) return 0.0;
+        boolean todos = (ano == ConsolidacaoService.ANO_TODOS);
+        double total = 0;
+        for (Investimento inv : invRepo.findByTipo(TipoInvestimento.DOLAR)) {
+            var movs = todos ? movRepo.findByInvestimento(inv.getId())
+                             : movRepo.findByInvestimentoEAno(inv.getId(), ano);
+            for (var mov : movs) {
+                double cot = mov.getCotacaoDolar() != null ? mov.getCotacaoDolar() : cotacaoDolar;
+                total += switch (mov.getTipoMov()) {
+                    case DEPOSITO -> mov.getValor() * cot;
+                    case SAQUE   -> -mov.getValor() * cot;
+                };
+            }
+        }
+        return total;
+    }
 
     private double calcDolarTotal(double dolarBrl) {
         double total = 0;
