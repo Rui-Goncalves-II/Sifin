@@ -11,6 +11,7 @@ import br.investimentos.ui.rendavariavel.RendaVariavelListPanel;
 import br.investimentos.service.ImportExportService;
 import br.investimentos.ui.transacao.TransacaoPanel;
 import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.service.AtualizacaoService;
 import br.investimentos.ui.util.Toast;
 import java.io.IOException;
 import java.io.InputStream;
@@ -145,6 +146,16 @@ public class MainWindow {
         stage.setMinWidth(800);
         stage.setMinHeight(600);
         stage.show();
+
+        var atualizacaoSvc = new AtualizacaoService();
+        atualizacaoSvc.verificarAtualizacaoAsync(tagName ->
+            Platform.runLater(() -> Toast.showAtualizacao(
+                rootLayer,
+                atualizacaoSvc.getVersaoAtual(),
+                tagName,
+                AtualizacaoService.getReleaseUrl()
+            ))
+        );
 
         cotacaoSvc.iniciarRefreshAutomatico(cot -> Platform.runLater(() -> {
             if (!contentArea.getChildren().isEmpty() &&
