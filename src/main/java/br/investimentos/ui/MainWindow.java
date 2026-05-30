@@ -106,7 +106,7 @@ public class MainWindow {
     }
 
     private Node makeTransacoes() {
-        ImportExportService impExpSvc = new ImportExportService(invRepo, movRepo, vtaRepo, vaiRepo, aporteRepo, vacRepo);
+        ImportExportService impExpSvc = new ImportExportService(invRepo, movRepo, vtaRepo, vaiRepo, aporteRepo, vacRepo, gastoRepo);
         return new TransacaoPanel(invRepo, movRepo, aporteRepo, impExpSvc);
     }
 

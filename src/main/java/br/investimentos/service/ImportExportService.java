@@ -3,6 +3,7 @@ package br.investimentos.service;
 import br.investimentos.model.*;
 import br.investimentos.model.enums.*;
 import br.investimentos.repository.*;
+import br.investimentos.model.enums.TipoGasto;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -10,19 +11,21 @@ import java.util.*;
 
 public class ImportExportService {
 
-    public record ImportResult(int ativosNovos, int movimentacoes, int vtas, int vais, int aportes, int vacs) {
+    public record ImportResult(int ativosNovos, int movimentacoes, int vtas, int vais, int aportes, int vacs, int gastos) {
         public String toMessage() {
             return String.format(
                 "Importação concluída!\n\nAtivos novos criados: %d\nMovimentações adicionadas: %d\n" +
-                "VTAs importadas: %d\nVAIs importados: %d\nAportes RV adicionados: %d\nVACs importadas: %d",
-                ativosNovos, movimentacoes, vtas, vais, aportes, vacs);
+                "VTAs importadas: %d\nVAIs importados: %d\nAportes RV adicionados: %d\nVACs importadas: %d\n" +
+                "Gastos importados: %d",
+                ativosNovos, movimentacoes, vtas, vais, aportes, vacs, gastos);
         }
     }
 
     private static final String HEADER =
         "record_type,nome_ativo,tipo_ativo,subtipo,indexador,taxa_anual,data_vencimento,moeda," +
         "ativo,notas_ativo,periodo_mes,periodo_ano,tipo_mov,valor,cotacao_dolar,notas," +
-        "tipo_op,quantidade,preco_por_cota,vta,vac,fonte_vac,ano_vai,vai";
+        "tipo_op,quantidade,preco_por_cota,vta,vac,fonte_vac,ano_vai,vai," +
+        "gasto_tipo,gasto_descricao,gasto_fim_mes,gasto_fim_ano,gasto_parcelas_total,gasto_parcela_numero,gasto_grupo_parcela";
 
     private final InvestimentoRepository invRepo;
     private final MovimentacaoRepository movRepo;
@@ -30,13 +33,16 @@ public class ImportExportService {
     private final VaiAnualRepository vaiRepo;
     private final AporteRvRepository aporteRepo;
     private final VacMensalRepository vacRepo;
+    private final GastoRepository gastoRepo;
 
     public ImportExportService(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
             VtaMensalRepository vtaRepo, VaiAnualRepository vaiRepo,
-            AporteRvRepository aporteRepo, VacMensalRepository vacRepo) {
+            AporteRvRepository aporteRepo, VacMensalRepository vacRepo,
+            GastoRepository gastoRepo) {
         this.invRepo = invRepo; this.movRepo = movRepo;
         this.vtaRepo = vtaRepo; this.vaiRepo = vaiRepo;
         this.aporteRepo = aporteRepo; this.vacRepo = vacRepo;
+        this.gastoRepo = gastoRepo;
     }
 
     public void exportar(File arquivo) throws IOException {
@@ -56,6 +62,8 @@ public class ImportExportService {
                 for (VacMensal vac : vacRepo.findByInvestimento(inv.getId()))
                     pw.println(linhaVac(inv.getNome(), vac));
             }
+            for (Gasto g : gastoRepo.findAll())
+                pw.println(linhaGasto(g));
         }
     }
 
@@ -66,7 +74,7 @@ public class ImportExportService {
         for (Investimento inv : invRepo.findAllInclArquivados())
             nomeParaId.put(inv.getNome(), inv.getId());
 
-        int ativosNovos = 0, movs = 0, vtas = 0, vais = 0, aportes = 0, vacs = 0;
+        int ativosNovos = 0, movs = 0, vtas = 0, vais = 0, aportes = 0, vacs = 0, gastos = 0;
 
         for (String[] row : rows) {
             if (row.length < 24 || !"INVESTIMENTO".equals(row[0])) continue;
@@ -82,6 +90,10 @@ public class ImportExportService {
         for (String[] row : rows) {
             if (row.length < 24) continue;
             String tipo = row[0];
+            if ("GASTO".equals(tipo)) {
+                if (row.length >= 31) { gastoRepo.salvar(parseGasto(row)); gastos++; }
+                continue;
+            }
             Integer invId = nomeParaId.get(row[1]);
             if (invId == null) continue;
             switch (tipo) {
@@ -93,7 +105,7 @@ public class ImportExportService {
             }
         }
 
-        return new ImportResult(ativosNovos, movs, vtas, vais, aportes, vacs);
+        return new ImportResult(ativosNovos, movs, vtas, vais, aportes, vacs, gastos);
     }
 
     // ── CSV writing ──────────────────────────────────────────────────────────
@@ -155,6 +167,22 @@ public class ImportExportService {
         f[11] = String.valueOf(vac.getPeriodoAno());
         f[20] = String.valueOf(vac.getVac());
         f[21] = s(vac.getFonte());
+        return csvLine(f);
+    }
+
+    private String linhaGasto(Gasto g) {
+        String[] f = empty("GASTO", "");
+        f[10] = g.getPeriodoMes() != null ? String.valueOf(g.getPeriodoMes()) : "";
+        f[11] = g.getPeriodoAno() != null ? String.valueOf(g.getPeriodoAno()) : "";
+        f[13] = String.valueOf(g.getValor());
+        f[15] = s(g.getNotas());
+        f[24] = g.getTipo().name();
+        f[25] = s(g.getDescricao());
+        f[26] = g.getFimMes() != null ? String.valueOf(g.getFimMes()) : "";
+        f[27] = g.getFimAno() != null ? String.valueOf(g.getFimAno()) : "";
+        f[28] = String.valueOf(g.getParcelasTotal());
+        f[29] = String.valueOf(g.getParcelaNumero());
+        f[30] = s(g.getGrupoParcela());
         return csvLine(f);
     }
 
@@ -226,10 +254,26 @@ public class ImportExportService {
         return v;
     }
 
+    private Gasto parseGasto(String[] row) {
+        Gasto g = new Gasto();
+        g.setTipo(TipoGasto.valueOf(row[24]));
+        g.setDescricao(row[25]);
+        g.setPeriodoMes(row[10].isEmpty() ? null : Integer.parseInt(row[10]));
+        g.setPeriodoAno(row[11].isEmpty() ? null : Integer.parseInt(row[11]));
+        g.setValor(Double.parseDouble(row[13]));
+        g.setNotas(nullIfEmpty(row[15]));
+        g.setFimMes(row[26].isEmpty() ? null : Integer.parseInt(row[26]));
+        g.setFimAno(row[27].isEmpty() ? null : Integer.parseInt(row[27]));
+        g.setParcelasTotal(row[28].isEmpty() ? 1 : Integer.parseInt(row[28]));
+        g.setParcelaNumero(row[29].isEmpty() ? 1 : Integer.parseInt(row[29]));
+        g.setGrupoParcela(nullIfEmpty(row[30]));
+        return g;
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static String[] empty(String type, String nome) {
-        String[] f = new String[24];
+        String[] f = new String[31];
         Arrays.fill(f, "");
         f[0] = type;
         f[1] = nome;
