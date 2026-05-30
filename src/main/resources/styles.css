@@ -27,19 +27,6 @@
     -fx-border-width: 0 1 0 0;
 }
 
-.nav-logo {
-    -fx-background-color: #3fb950;
-    -fx-text-fill: #0d1117;
-    -fx-font-size: 19px;
-    -fx-font-weight: bold;
-    -fx-background-radius: 10px;
-    -fx-min-width: 36px;
-    -fx-max-width: 36px;
-    -fx-min-height: 36px;
-    -fx-max-height: 36px;
-    -fx-alignment: center;
-    -fx-cursor: default;
-}
 
 .nav-item {
     -fx-background-color: transparent;
@@ -302,6 +289,17 @@
     -fx-cursor: hand;
 }
 .btn-danger:hover { -fx-background-color: #ff6b63; }
+
+.btn-warning {
+    -fx-background-color: #d29922;
+    -fx-text-fill: #0d1117;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-padding: 8 20;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+}
+.btn-warning:hover { -fx-background-color: #e3ad29; }
 
 .btn-icon {
     -fx-background-color: transparent;

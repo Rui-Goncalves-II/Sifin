@@ -29,7 +29,7 @@ public class Main extends Application {
         var projecaoSvc  = new ProjecaoService(vtaRepo, taxaSvc, rendSvc);
         var vaiSvc       = new VaiService(invRepo, vaiRepo, vtaRepo, db);
         var alertaSvc    = new AlertaService(invRepo, vtaRepo, vacRepo);
-        var consolSvc    = new ConsolidacaoService(invRepo, movRepo, vtaRepo, aporteRepo, vacRepo, rendSvc, rvSvc);
+        var consolSvc    = new ConsolidacaoService(invRepo, movRepo, vtaRepo, vaiRepo, aporteRepo, vacRepo, rendSvc, rvSvc);
         var cotacaoSvc   = new CotacaoService(cotaRepo);
         var gastosSvc    = new GastosService(gastoRepo);
 
@@ -38,14 +38,11 @@ public class Main extends Application {
         MainWindow window = new MainWindow(
                 primaryStage, invRepo, movRepo, aporteRepo, vtaRepo, vacRepo, vaiRepo,
                 gastoRepo,
-                taxaSvc, rendSvc, rvSvc, saldoSvc, projecaoSvc, alertaSvc, consolSvc, cotacaoSvc,
+                taxaSvc, rendSvc, rvSvc, saldoSvc, projecaoSvc, vaiSvc, alertaSvc, consolSvc, cotacaoSvc,
                 gastosSvc
         );
         window.show();
     }
-
-    @Override
-    public void stop() {}
 
     public static void main(String[] args) {
         launch(args);

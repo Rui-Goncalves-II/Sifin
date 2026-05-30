@@ -16,9 +16,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import javafx.embed.swing.SwingNode;
 import javax.swing.SwingUtilities;
 import org.jfree.chart.ChartPanel;
@@ -29,6 +27,8 @@ import java.util.function.Consumer;
 
 public class RendaFixaDetalhePanel extends BorderPane {
 
+    private static final int ANO_TODOS = -1;
+
     private final Investimento inv;
     private final InvestimentoRepository invRepo;
     private final MovimentacaoRepository movRepo;
@@ -37,35 +37,68 @@ public class RendaFixaDetalhePanel extends BorderPane {
     private final RendimentoService rendSvc;
     private final TaxaService taxaSvc;
     private final SaldoService saldoSvc;
+    private final VaiService vaiSvc;
     private final Consumer<Node> navigate;
+
+    private int anoSelecionado;
 
     public RendaFixaDetalhePanel(Investimento inv, InvestimentoRepository invRepo,
                                   MovimentacaoRepository movRepo, VtaMensalRepository vtaRepo,
                                   VaiAnualRepository vaiRepo, RendimentoService rendSvc,
                                   TaxaService taxaSvc, SaldoService saldoSvc,
-                                  Consumer<Node> navigate) {
+                                  VaiService vaiSvc, Consumer<Node> navigate) {
         this.inv = inv; this.invRepo = invRepo; this.movRepo = movRepo;
         this.vtaRepo = vtaRepo; this.vaiRepo = vaiRepo; this.rendSvc = rendSvc;
-        this.taxaSvc = taxaSvc; this.saldoSvc = saldoSvc; this.navigate = navigate;
+        this.taxaSvc = taxaSvc; this.saldoSvc = saldoSvc; this.vaiSvc = vaiSvc;
+        this.navigate = navigate;
+        anoSelecionado = LocalDate.now().getYear();
         construir();
     }
 
+    private List<Integer> anosComDados() {
+        TreeSet<Integer> anos = new TreeSet<>();
+        vtaRepo.findByInvestimento(inv.getId()).forEach(v -> anos.add(v.getPeriodoAno()));
+        movRepo.findByInvestimento(inv.getId()).forEach(m -> anos.add(m.getPeriodoAno()));
+        anos.add(LocalDate.now().getYear());
+        return new ArrayList<>(anos);
+    }
+
+    private HBox buildYearBar() {
+        HBox bar = new HBox(6);
+        bar.setAlignment(Pos.CENTER_LEFT);
+
+        for (int ano : anosComDados()) {
+            Button btn = new Button(String.valueOf(ano));
+            btn.getStyleClass().add("year-btn");
+            if (ano == anoSelecionado) btn.getStyleClass().add("active");
+            btn.setOnAction(e -> { anoSelecionado = ano; construir(); });
+            bar.getChildren().add(btn);
+        }
+
+        Button todos = new Button("Total");
+        todos.getStyleClass().add("year-btn");
+        if (anoSelecionado == ANO_TODOS) todos.getStyleClass().add("active");
+        todos.setOnAction(e -> { anoSelecionado = ANO_TODOS; construir(); });
+        bar.getChildren().add(todos);
+
+        return bar;
+    }
+
     private void construir() {
-        // Header
         HBox header = new HBox(12);
         header.getStyleClass().add("dash-header");
         header.setAlignment(Pos.CENTER_LEFT);
         Button btnVoltar = new Button("← Voltar");
         btnVoltar.getStyleClass().add("btn-secondary");
         btnVoltar.setOnAction(e -> navigate.accept(new RendaFixaListPanel(
-                invRepo, movRepo, vtaRepo, vaiRepo, rendSvc, taxaSvc, saldoSvc, navigate)));
+                invRepo, movRepo, vtaRepo, vaiRepo, rendSvc, taxaSvc, saldoSvc, vaiSvc, navigate)));
         Label title = new Label("🏦 " + inv.getNome());
         title.getStyleClass().add("page-title");
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
         Button btnVta = new Button("+ VTA");
         btnVta.getStyleClass().add("btn-primary");
         btnVta.setOnAction(e -> {
-            new VtaFormDialog(inv, vtaRepo, vaiRepo, rendSvc).showAndWait();
+            new VtaFormDialog(inv, vtaRepo, vaiRepo, rendSvc, vaiSvc).showAndWait();
             construir();
         });
         Button btnProjecao = new Button("📈 Projeção");
@@ -74,7 +107,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
             ProjecaoService projecaoSvc = new ProjecaoService(vtaRepo, taxaSvc, rendSvc);
             navigate.accept(new ProjecaoPanel(invRepo, projecaoSvc, navigate));
         });
-        header.getChildren().addAll(btnVoltar, title, spacer, btnProjecao, btnVta);
+        header.getChildren().addAll(btnVoltar, title, spacer, buildYearBar(), btnProjecao, btnVta);
         setTop(header);
 
         ScrollPane scroll = new ScrollPane(buildContent());
@@ -87,28 +120,50 @@ public class RendaFixaDetalhePanel extends BorderPane {
         VBox content = new VBox(16);
         content.setPadding(new Insets(20, 24, 24, 24));
 
-        // Sumário
         LocalDate hoje = LocalDate.now();
-        int mes = hoje.getMonthValue();
-        int ano = hoje.getYear();
+        int mesAtual = hoje.getMonthValue();
+        int anoAtual = hoje.getYear();
         double saldoAtual = saldoSvc.saldoAtual(inv, 0);
-        double vai = vaiRepo.getVai(inv.getId(), ano);
-        double sam = rendSvc.calcularSam(inv.getId(), ano, mes);
-        double vi = vai + sam;
-        // R acumulado = R do último VTA registrado no ano (já inclui todos os meses anteriores)
-        double r = vtaRepo.findUltimoDoAno(inv.getId(), ano)
-                .map(rendSvc::calcularR)
-                .orElse(0.0);
 
+        // ── Summary cards ────────────────────────────────────────────────
         GridPane sumGrid = new GridPane();
         sumGrid.setHgap(12); sumGrid.setVgap(12);
-        ColumnConstraints cc = new ColumnConstraints(); cc.setPercentWidth(25); cc.setHgrow(Priority.ALWAYS);
+        ColumnConstraints cc = new ColumnConstraints();
+        cc.setPercentWidth(25); cc.setHgrow(Priority.ALWAYS);
         sumGrid.getColumnConstraints().addAll(cc, cc, cc, cc);
 
-        sumGrid.add(metricCard("Saldo Atual", FormatUtil.brl(saldoAtual), "neutral"), 0, 0);
-        sumGrid.add(metricCard("VAI " + ano, FormatUtil.brl(vai), "neutral"), 1, 0);
-        sumGrid.add(metricCard("SAM " + FormatUtil.mesAno(mes, ano), FormatUtil.brl(sam), "neutral"), 2, 0);
-        sumGrid.add(metricCard("Rendimento (R)", FormatUtil.brl(r), r >= 0 ? "positive" : "negative"), 3, 0);
+        if (anoSelecionado != ANO_TODOS) {
+            int ateOMes = (anoSelecionado == anoAtual) ? mesAtual : 12;
+            double vai = vaiRepo.getVai(inv.getId(), anoSelecionado);
+            double sam = rendSvc.calcularSam(inv.getId(), anoSelecionado, ateOMes);
+            double r = vtaRepo.findUltimoDoAno(inv.getId(), anoSelecionado)
+                    .map(rendSvc::calcularR).orElse(0.0);
+            String samLabel = (anoSelecionado == anoAtual)
+                    ? "SAM " + FormatUtil.mesAno(mesAtual, anoSelecionado)
+                    : "SAM " + anoSelecionado;
+
+            sumGrid.add(metricCard("Saldo Atual", FormatUtil.brl(saldoAtual), "neutral"), 0, 0);
+            sumGrid.add(metricCard("VAI " + anoSelecionado, FormatUtil.brl(vai), "neutral"), 1, 0);
+            sumGrid.add(metricCard(samLabel, FormatUtil.brl(sam), "neutral"), 2, 0);
+            sumGrid.add(metricCard("Rendimento (R)", FormatUtil.brl(r), r >= 0 ? "positive" : "negative"), 3, 0);
+        } else {
+            double totalAportado = 0;
+            for (Movimentacao m : movRepo.findByInvestimento(inv.getId()))
+                totalAportado += m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor();
+
+            double rTotal = 0;
+            for (int ano : anosComDados())
+                rTotal += vtaRepo.findUltimoDoAno(inv.getId(), ano).map(rendSvc::calcularR).orElse(0.0);
+
+            String pctStr = (totalAportado > 0)
+                    ? FormatUtil.pct(rTotal / totalAportado * 100)
+                    : "—";
+
+            sumGrid.add(metricCard("Saldo Atual", FormatUtil.brl(saldoAtual), "neutral"), 0, 0);
+            sumGrid.add(metricCard("Total Aportado", FormatUtil.brl(totalAportado), "neutral"), 1, 0);
+            sumGrid.add(metricCard("Total Rendimento", FormatUtil.brl(rTotal), rTotal >= 0 ? "positive" : "negative"), 2, 0);
+            sumGrid.add(metricCard("Rendimento %", pctStr, rTotal >= 0 ? "positive" : "negative"), 3, 0);
+        }
 
         // Info do ativo
         String subInfo = (inv.getSubtipo() != null ? inv.getSubtipo() : "—") +
@@ -118,8 +173,11 @@ public class RendaFixaDetalhePanel extends BorderPane {
                 (inv.getDataVencimento() != null ? "  |  Vencimento: " + inv.getDataVencimento() : ""));
         info.getStyleClass().add("card-label");
 
-        // Dados para gráficos e tabela
-        List<VtaMensal> vtas = vtaRepo.findByInvestimento(inv.getId());
+        // Filtered VTA list
+        List<VtaMensal> vtas = (anoSelecionado != ANO_TODOS)
+                ? vtaRepo.findByInvestimentoEAno(inv.getId(), anoSelecionado)
+                : vtaRepo.findByInvestimento(inv.getId());
+
         Map<Integer, Double> somaAntByVtaId = new HashMap<>();
         double prevR = 0;
         int prevAno = -1;
@@ -132,7 +190,10 @@ public class RendaFixaDetalhePanel extends BorderPane {
         HBox graficos = buildGraficos(vtas, somaAntByVtaId);
 
         // Histórico VTA
-        Label histTitle = new Label("Histórico de VTA");
+        String histLabel = (anoSelecionado != ANO_TODOS)
+                ? "Histórico de VTA — " + anoSelecionado
+                : "Histórico de VTA — Total";
+        Label histTitle = new Label(histLabel);
         histTitle.getStyleClass().add("section-title");
 
         TableView<VtaMensal> vtaTable = new TableView<>();
@@ -192,7 +253,9 @@ public class RendaFixaDetalhePanel extends BorderPane {
         cTaxa.setPrefWidth(100);
 
         TableColumn<VtaMensal, Void> cAcoes = new TableColumn<>("Ações");
-        cAcoes.setPrefWidth(150);
+        cAcoes.setMinWidth(160);
+        cAcoes.setPrefWidth(160);
+        cAcoes.setMaxWidth(160);
         cAcoes.setCellFactory(col -> new TableCell<>() {
             private final Button btnEdit = new Button("✏ Editar");
             private final Button btnDel  = new Button("🗑 Excluir");
@@ -201,10 +264,12 @@ public class RendaFixaDetalhePanel extends BorderPane {
                 btnDel.getStyleClass().add("btn-danger");
                 btnEdit.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
                 btnDel.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
+                btnEdit.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+                btnDel.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
 
                 btnEdit.setOnAction(e -> {
                     VtaMensal v = getTableView().getItems().get(getIndex());
-                    new VtaFormDialog(inv, vtaRepo, vaiRepo, rendSvc, v).showAndWait();
+                    new VtaFormDialog(inv, vtaRepo, vaiRepo, rendSvc, vaiSvc, v).showAndWait();
                     construir();
                 });
 
@@ -234,7 +299,10 @@ public class RendaFixaDetalhePanel extends BorderPane {
         vtaTable.getItems().addAll(vtas);
 
         // ── Movimentações ────────────────────────────────────────────────
-        Label movTitle = new Label("Movimentações (Depósitos e Saques)");
+        String movLabel = (anoSelecionado != ANO_TODOS)
+                ? "Movimentações — " + anoSelecionado
+                : "Movimentações — Total";
+        Label movTitle = new Label(movLabel);
         movTitle.getStyleClass().add("section-title");
 
         Button btnNovaMov = new Button("+ Movimentação");
@@ -325,7 +393,9 @@ public class RendaFixaDetalhePanel extends BorderPane {
         });
 
         movTable.getColumns().addAll(mPer, mTipo, mValor, mNotas, mAcoes);
-        List<Movimentacao> movs = movRepo.findByInvestimento(inv.getId());
+        List<Movimentacao> movs = (anoSelecionado != ANO_TODOS)
+                ? movRepo.findByInvestimentoEAno(inv.getId(), anoSelecionado)
+                : movRepo.findByInvestimento(inv.getId());
         java.util.Collections.reverse(movs);
         movTable.getItems().addAll(movs);
 
@@ -373,7 +443,10 @@ public class RendaFixaDetalhePanel extends BorderPane {
         saldoPlot.setBackgroundPaint(bgCard); saldoPlot.setOutlinePaint(border);
         saldoPlot.setRangeGridlinePaint(border); saldoPlot.setDomainGridlinesVisible(false);
 
-        JFreeChart saldoChart = new JFreeChart("Saldo por Mês", fontBold, saldoPlot, false);
+        String saldoTitle = (anoSelecionado != ANO_TODOS)
+                ? "Saldo por Mês — " + anoSelecionado
+                : "Saldo por Mês — Total";
+        JFreeChart saldoChart = new JFreeChart(saldoTitle, fontBold, saldoPlot, false);
         saldoChart.setBackgroundPaint(bgCard); saldoChart.setBorderVisible(false);
         saldoChart.getTitle().setPaint(textMut); saldoChart.getTitle().setFont(fontBold);
 
@@ -414,7 +487,10 @@ public class RendaFixaDetalhePanel extends BorderPane {
         rendPlot.setRangeGridlinePaint(border); rendPlot.setDomainGridlinesVisible(false);
         rendPlot.setRangeZeroBaselinePaint(textMut); rendPlot.setRangeZeroBaselineVisible(true);
 
-        JFreeChart rendChart = new JFreeChart("Rendimento Mensal", fontBold, rendPlot, false);
+        String rendTitle = (anoSelecionado != ANO_TODOS)
+                ? "Rendimento Mensal — " + anoSelecionado
+                : "Rendimento Mensal — Total";
+        JFreeChart rendChart = new JFreeChart(rendTitle, fontBold, rendPlot, false);
         rendChart.setBackgroundPaint(bgCard); rendChart.setBorderVisible(false);
         rendChart.getTitle().setPaint(textMut); rendChart.getTitle().setFont(fontBold);
 

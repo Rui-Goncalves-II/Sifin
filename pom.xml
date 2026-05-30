@@ -148,6 +148,30 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- mvn jpackage:jpackage -Pwindows -->
+            <plugin>
+                <groupId>org.panteleyev</groupId>
+                <artifactId>jpackage-maven-plugin</artifactId>
+                <version>1.6.5</version>
+                <configuration>
+                    <name>Sifin</name>
+                    <appVersion>${project.version}</appVersion>
+                    <vendor>Sifin</vendor>
+                    <mainJar>sifin-${project.version}.jar</mainJar>
+                    <mainClass>br.investimentos.Launcher</mainClass>
+                    <input>${project.build.directory}</input>
+                    <destination>${project.build.directory}/dist</destination>
+                    <icon>${project.basedir}/src/main/resources/icone-S.ico</icon>
+                    <winDirChooser>true</winDirChooser>
+                    <winShortcut>true</winShortcut>
+                    <winMenu>true</winMenu>
+                    <winMenuGroup>Sifin</winMenuGroup>
+                    <javaOptions>
+                        <option>-Dfile.encoding=UTF-8</option>
+                        <option>-Dapp.home=$APPDIR</option>
+                    </javaOptions>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

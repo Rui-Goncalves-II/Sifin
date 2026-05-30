@@ -40,4 +40,14 @@ public class InputUtil {
         };
         field.setTextFormatter(new TextFormatter<>(filter));
     }
+
+    /** Converte string com vírgula decimal (padrão BR) para ponto, pronto para parse. */
+    public static String normalizeDecimalInput(String text) {
+        return text.strip().replace(",", ".");
+    }
+
+    /** Interpreta string com vírgula decimal (padrão BR) como double. */
+    public static double parseDoubleField(String text) {
+        return Double.parseDouble(normalizeDecimalInput(text));
+    }
 }

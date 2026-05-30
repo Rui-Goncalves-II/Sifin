@@ -200,7 +200,7 @@ public class GastoFormDialog extends Stage {
 
         BigDecimal valorBD;
         try {
-            valorBD = new BigDecimal(fValor.getText().replace(",", ".")).setScale(2, RoundingMode.HALF_UP);
+            valorBD = new BigDecimal(InputUtil.normalizeDecimalInput(fValor.getText())).setScale(2, RoundingMode.HALF_UP);
             if (valorBD.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
         } catch (NumberFormatException ex) { alert("Valor inválido."); return; }
 

@@ -4,6 +4,7 @@ import br.investimentos.model.Investimento;
 import br.investimentos.model.VtaMensal;
 import br.investimentos.repository.*;
 import br.investimentos.service.RendimentoService;
+import br.investimentos.service.VaiService;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
@@ -17,14 +18,15 @@ public class VtaFormDialog extends Dialog<Void> {
 
     /** Novo VTA (período padrão = mês atual). */
     public VtaFormDialog(Investimento inv, VtaMensalRepository vtaRepo,
-                         VaiAnualRepository vaiRepo, RendimentoService rendSvc) {
-        this(inv, vtaRepo, vaiRepo, rendSvc, null);
+                         VaiAnualRepository vaiRepo, RendimentoService rendSvc,
+                         VaiService vaiSvc) {
+        this(inv, vtaRepo, vaiRepo, rendSvc, vaiSvc, null);
     }
 
     /** Editar VTA existente: período e valor pré-preenchidos de {@code preFill}. */
     public VtaFormDialog(Investimento inv, VtaMensalRepository vtaRepo,
                          VaiAnualRepository vaiRepo, RendimentoService rendSvc,
-                         VtaMensal preFill) {
+                         VaiService vaiSvc, VtaMensal preFill) {
         setTitle((preFill != null ? "Editar" : "Informar") + " VTA — " + inv.getNome());
         initModality(Modality.APPLICATION_MODAL);
 
@@ -80,7 +82,7 @@ public class VtaFormDialog extends Dialog<Void> {
                 double vi = rendSvc.calcularVi(inv.getId(), ano, mes);
                 viLabel.setText("VI = " + FormatUtil.brl(vi));
                 if (!fVta.getText().isBlank()) {
-                    double vta = Double.parseDouble(fVta.getText().strip().replace(",", "."));
+                    double vta = InputUtil.parseDoubleField(fVta.getText());
                     double r = vta - vi;
                     rLabel.setText("R = " + FormatUtil.brl(r) + " (" + FormatUtil.pct(vi > 0 ? r / vi * 100 : 0) + ")");
                     rLabel.setStyle(r >= 0 ? "-fx-text-fill: #2e7d32; -fx-font-weight: bold;" : "-fx-text-fill: #c62828; -fx-font-weight: bold;");
@@ -104,7 +106,7 @@ public class VtaFormDialog extends Dialog<Void> {
             try {
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
-                double vta = Double.parseDouble(fVta.getText().strip().replace(",", "."));
+                double vta = InputUtil.parseDoubleField(fVta.getText());
 
                 VtaMensal vtaM = new VtaMensal();
                 vtaM.setInvestimentoId(inv.getId());
@@ -112,6 +114,10 @@ public class VtaFormDialog extends Dialog<Void> {
                 vtaM.setPeriodoAno(ano);
                 vtaM.setVta(vta);
                 vtaRepo.salvar(vtaM);
+
+                if (ano < LocalDate.now().getYear()) {
+                    vaiSvc.recalcularVaiDoAnoSeguinte(inv.getId(), ano);
+                }
             } catch (NumberFormatException ex) {
                 errLabel.setText("Valores inválidos.");
                 e.consume();

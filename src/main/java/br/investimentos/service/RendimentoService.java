@@ -54,18 +54,4 @@ public class RendimentoService {
         double vi = calcularVi(vta.getInvestimentoId(), vta.getPeriodoAno(), vta.getPeriodoMes());
         return vta.getVta() - vi;
     }
-
-    /**
-     * Soma dos rendimentos dos meses anteriores ao mês informado no mesmo ano.
-     * Equivale ao R cumulativo do mês imediatamente anterior com VTA no mesmo ano.
-     * Propriedade telescópica: RM_1 + RM_2 + ... + RM_{M-1} = R_{M-1}
-     */
-    public double calcularSomaRendimentosAnteriores(int investimentoId, int mes, int ano) {
-        List<VtaMensal> vtasDoAno = vtaRepo.findByInvestimentoEAno(investimentoId, ano);
-        VtaMensal prevVta = null;
-        for (VtaMensal v : vtasDoAno) {
-            if (v.getPeriodoMes() < mes) prevVta = v;
-        }
-        return prevVta == null ? 0.0 : calcularR(prevVta);
-    }
 }

@@ -8,11 +8,10 @@ import br.investimentos.service.*;
 import br.investimentos.service.GastosService.ResumoMensal;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.GlossarioTooltip;
+import br.investimentos.ui.util.UIUtil;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingNode;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.WritableImage;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -139,7 +138,7 @@ public class DashboardPanel extends BorderPane {
         double dolarTotal = tiposFiltro.contains(TipoInvestimento.DOLAR) ? calcDolarTotal(dolarBrl) : 0.0;
         double ptaTotal = r.pta() + dolarTotal;
         LocalDate hoje = LocalDate.now();
-        double aporteMes = consolSvc.calcularAportesDoMes(hoje.getMonthValue(), hoje.getYear(), tiposFiltro);
+        double aporteMes = consolSvc.calcularAportesDoAno(anoSelecionado, tiposFiltro);
 
         int gastoAno = anoSelecionado == ConsolidacaoService.ANO_TODOS ? GastosService.ANO_TODOS : anoSelecionado;
         double gt  = gastosSvc.calcularGT(gastoAno);
@@ -153,7 +152,7 @@ public class DashboardPanel extends BorderPane {
         atualizarAlertas();
         contentBox.getChildren().add(alertBox);
         contentBox.getChildren().add(buildPillsBar(r, dolarTotal));
-        contentBox.getChildren().add(buildKpiGrid(r, aporteMes, hoje, ptaTotal));
+        contentBox.getChildren().add(buildKpiGrid(r, aporteMes, ptaTotal));
         contentBox.getChildren().add(buildGastosKpiRow(gt, gat, gdt, gmt));
 
         HBox rendRow = buildRendimentoCard(r);
@@ -177,11 +176,11 @@ public class DashboardPanel extends BorderPane {
 
         bar.getChildren().addAll(
             makePillToggle(loadIcon("/icons/renda-passiva.png", 14),
-                    "Renda Fixa   " + FormatUtil.brlAbrev(r.vtarf()),
+                    "Renda Fixa   " + FormatUtil.brl(r.vtarf()),
                     "pill-rf", TipoInvestimento.RENDA_FIXA),
-            makePillToggle(null, "💹  Renda Variável   " + FormatUtil.brlAbrev(r.vtarv()),
+            makePillToggle(null, "💹  Renda Variável   " + FormatUtil.brl(r.vtarv()),
                     "pill-rv", TipoInvestimento.RENDA_VARIAVEL),
-            makePillToggle(null, "$  Dólar   " + FormatUtil.brlAbrev(dolarTotal),
+            makePillToggle(null, "$  Dólar   " + FormatUtil.brl(dolarTotal),
                     "pill-usd", TipoInvestimento.DOLAR)
         );
         return bar;
@@ -205,7 +204,7 @@ public class DashboardPanel extends BorderPane {
 
     // ── 4 KPI cards ─────────────────────────────────────────────────────
 
-    private HBox buildKpiGrid(ConsolidacaoService.ResultadoConsolidado r, double aporteMes, LocalDate hoje, double ptaTotal) {
+    private HBox buildKpiGrid(ConsolidacaoService.ResultadoConsolidado r, double aporteMes, double ptaTotal) {
         HBox row = new HBox(12);
 
         String gpStyle = r.vtra() >= 0 ? "positive" : "negative";
@@ -214,8 +213,11 @@ public class DashboardPanel extends BorderPane {
         VBox kpi1 = makeKpiCard("Patrimônio Total", FormatUtil.brl(ptaTotal), "PTA", "neutral", "#bc8cff");
         VBox kpi2 = makeKpiCard("Total Investido", FormatUtil.brl(r.vtia()), "VTIA", "neutral", "#58a6ff");
         VBox kpi3 = makeKpiCard("Ganho / Perda", FormatUtil.brl(r.vtra()), "VTRA", gpStyle, gpColor);
-        VBox kpi4 = makeKpiCard("Aporte do Mês", FormatUtil.brl(aporteMes),
-                FormatUtil.mesAno(hoje.getMonthValue(), hoje.getYear()), "neutral", "#e3b341");
+        String aporteLabel = anoSelecionado == ConsolidacaoService.ANO_TODOS
+                ? "Aportado Total" : "Aportado " + anoSelecionado;
+        String aporteSub = anoSelecionado == ConsolidacaoService.ANO_TODOS
+                ? "Histórico total" : String.valueOf(anoSelecionado);
+        VBox kpi4 = makeKpiCard(aporteLabel, FormatUtil.brl(aporteMes), aporteSub, "neutral", "#e3b341");
 
         for (VBox card : new VBox[]{kpi1, kpi2, kpi3, kpi4}) {
             card.setMaxWidth(Double.MAX_VALUE);
@@ -234,6 +236,7 @@ public class DashboardPanel extends BorderPane {
 
         Label lbl = new Label(label);
         lbl.getStyleClass().add("kpi-label");
+        GlossarioTooltip.aplicar(lbl, label);
 
         Label val = new Label(value);
         val.getStyleClass().addAll("kpi-value", valueStyle);
@@ -510,7 +513,7 @@ public class DashboardPanel extends BorderPane {
         HBox row = new HBox(12);
 
         if (tiposFiltro.contains(TipoInvestimento.RENDA_FIXA)) {
-            VBox card = makeMiniCard("🏦", "Renda Fixa", FormatUtil.brl(r.vtarf()),
+            VBox card = makeMiniCard("🏦", "Renda Fixa", FormatUtil.brl(r.viarf()),
                     "Rendimentos: " + FormatUtil.brl(r.rarf()), "badge-rf");
             card.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(card, Priority.ALWAYS);
@@ -518,7 +521,7 @@ public class DashboardPanel extends BorderPane {
         }
 
         if (tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL)) {
-            VBox card = makeMiniCard("💹", "Renda Variável", FormatUtil.brl(r.vtarv()),
+            VBox card = makeMiniCard("💹", "Renda Variável", FormatUtil.brl(r.parv()),
                     "Dividendos: " + FormatUtil.brl(r.dta()), "badge-rv");
             card.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(card, Priority.ALWAYS);
@@ -546,6 +549,7 @@ public class DashboardPanel extends BorderPane {
         iconLbl.setStyle("-fx-font-size: 20px;");
         Label typeLbl = new Label(label);
         typeLbl.getStyleClass().add(badgeStyle);
+        GlossarioTooltip.aplicar(typeLbl, label);
         hdr.getChildren().addAll(iconLbl, typeLbl);
 
         Label totalLbl = new Label(total);
@@ -563,7 +567,6 @@ public class DashboardPanel extends BorderPane {
     private VBox buildAssetsCard(double pta) {
         TableView<Investimento> table = new TableView<>();
         table.getStyleClass().add("table-view");
-        table.setPrefHeight(220);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         TableColumn<Investimento, String> colNome = new TableColumn<>("Ativo");
@@ -611,6 +614,10 @@ public class DashboardPanel extends BorderPane {
         table.getItems().addAll(invRepo.findAll().stream()
                 .filter(inv -> tiposFiltro.contains(inv.getTipo()))
                 .collect(Collectors.toList()));
+
+        int rowH = 32, headerH = 30;
+        table.setPrefHeight(table.getItems().size() * rowH + headerH);
+        table.setMinHeight(table.getPrefHeight());
 
         Label titleLbl = new Label("Ativos da Carteira");
         titleLbl.getStyleClass().add("section-title");
@@ -965,28 +972,7 @@ public class DashboardPanel extends BorderPane {
     }
 
     private ImageView loadIcon(String resourcePath, int size) {
-        var stream = getClass().getResourceAsStream(resourcePath);
-        if (stream == null) return new ImageView();
-        Image original = new Image(stream, size * 2, size * 2, true, true);
-        int w = (int) original.getWidth();
-        int h = (int) original.getHeight();
-        WritableImage result = new WritableImage(w, h);
-        var reader = original.getPixelReader();
-        var writer = result.getPixelWriter();
-        javafx.scene.paint.Color target = javafx.scene.paint.Color.web("#adbac7");
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                javafx.scene.paint.Color px = reader.getColor(x, y);
-                double lum = 0.299 * px.getRed() + 0.587 * px.getGreen() + 0.114 * px.getBlue();
-                double alpha = (1.0 - lum) * px.getOpacity();
-                writer.setColor(x, y, alpha > 0.05
-                    ? new javafx.scene.paint.Color(target.getRed(), target.getGreen(), target.getBlue(), Math.min(alpha, 1.0))
-                    : javafx.scene.paint.Color.TRANSPARENT);
-            }
-        }
-        ImageView iv = new ImageView(result);
-        iv.setFitWidth(size); iv.setFitHeight(size); iv.setSmooth(true);
-        return iv;
+        return UIUtil.loadTintedIcon(getClass(), resourcePath, size);
     }
 
     private static double colW(String header, double contentMin) {

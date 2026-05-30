@@ -102,35 +102,6 @@ class RendimentoServiceTest {
         assertEquals(500.0, svc.calcularR(1, 6, 2025), 1e-10);
     }
 
-    @Test
-    void calcularSomaRendimentosAnteriores_semVtaAnterior_retornaZero() {
-        when(vtaRepo.findByInvestimentoEAno(1, 2025)).thenReturn(List.of());
-
-        assertEquals(0.0, svc.calcularSomaRendimentosAnteriores(1, 3, 2025), 1e-10);
-    }
-
-    @Test
-    void calcularSomaRendimentosAnteriores_primeiroMes_retornaZero() {
-        VtaMensal vtaJan = vtaMensal(1, 1, 2025, 10100.0);
-        when(vtaRepo.findByInvestimentoEAno(1, 2025)).thenReturn(List.of(vtaJan));
-
-        // Mês 1 = nenhum anterior no mesmo ano
-        assertEquals(0.0, svc.calcularSomaRendimentosAnteriores(1, 1, 2025), 1e-10);
-    }
-
-    @Test
-    void calcularSomaRendimentosAnteriores_segundoMes_igualARJaneiro() {
-        // VAI=10000, sem movimentações → VI=10000
-        // Janeiro: VTA=10100 → R_jan=100
-        // Fevereiro: soma de anteriores = R_jan = 100
-        when(vaiRepo.getVai(1, 2025)).thenReturn(10000.0);
-        when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 1)).thenReturn(List.of());
-
-        VtaMensal vtaJan = vtaMensal(1, 1, 2025, 10100.0);
-        when(vtaRepo.findByInvestimentoEAno(1, 2025)).thenReturn(List.of(vtaJan));
-
-        assertEquals(100.0, svc.calcularSomaRendimentosAnteriores(1, 2, 2025), 1e-10);
-    }
 
     // -- helpers --
 

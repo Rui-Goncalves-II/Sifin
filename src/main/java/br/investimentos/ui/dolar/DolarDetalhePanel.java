@@ -8,6 +8,7 @@ import br.investimentos.repository.InvestimentoRepository;
 import br.investimentos.repository.MovimentacaoRepository;
 import br.investimentos.service.CotacaoService;
 import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.ui.util.GlossarioTooltip;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -15,9 +16,12 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
 import java.time.LocalDate;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class DolarDetalhePanel extends BorderPane {
+
+    private static final int ANO_TODOS = -1;
 
     private final Investimento inv;
     private final InvestimentoRepository invRepo;
@@ -25,12 +29,43 @@ public class DolarDetalhePanel extends BorderPane {
     private final CotacaoService cotacaoSvc;
     private final Consumer<Node> navigate;
 
+    private int anoSelecionado;
+
     public DolarDetalhePanel(Investimento inv, InvestimentoRepository invRepo,
                               MovimentacaoRepository movRepo, CotacaoService cotacaoSvc,
                               Consumer<Node> navigate) {
         this.inv = inv; this.invRepo = invRepo; this.movRepo = movRepo;
         this.cotacaoSvc = cotacaoSvc; this.navigate = navigate;
+        anoSelecionado = LocalDate.now().getYear();
         construir();
+    }
+
+    private List<Integer> anosComDados() {
+        TreeSet<Integer> anos = new TreeSet<>();
+        movRepo.findByInvestimento(inv.getId()).forEach(m -> anos.add(m.getPeriodoAno()));
+        anos.add(LocalDate.now().getYear());
+        return new ArrayList<>(anos);
+    }
+
+    private HBox buildYearBar() {
+        HBox bar = new HBox(6);
+        bar.setAlignment(Pos.CENTER_LEFT);
+
+        for (int ano : anosComDados()) {
+            Button btn = new Button(String.valueOf(ano));
+            btn.getStyleClass().add("year-btn");
+            if (ano == anoSelecionado) btn.getStyleClass().add("active");
+            btn.setOnAction(e -> { anoSelecionado = ano; construir(); });
+            bar.getChildren().add(btn);
+        }
+
+        Button todos = new Button("Total");
+        todos.getStyleClass().add("year-btn");
+        if (anoSelecionado == ANO_TODOS) todos.getStyleClass().add("active");
+        todos.setOnAction(e -> { anoSelecionado = ANO_TODOS; construir(); });
+        bar.getChildren().add(todos);
+
+        return bar;
     }
 
     private void construir() {
@@ -46,7 +81,7 @@ public class DolarDetalhePanel extends BorderPane {
         Button btnMov = new Button("+ Movimentação");
         btnMov.getStyleClass().add("btn-primary");
         btnMov.setOnAction(e -> { new DolarMovFormDialog(inv, new Movimentacao(), movRepo).showAndWait(); construir(); });
-        header.getChildren().addAll(btnVoltar, title, spacer, btnMov);
+        header.getChildren().addAll(btnVoltar, title, spacer, buildYearBar(), btnMov);
         setTop(header);
 
         ScrollPane scroll = new ScrollPane(buildContent());
@@ -59,26 +94,54 @@ public class DolarDetalhePanel extends BorderPane {
         VBox content = new VBox(16);
         content.setPadding(new Insets(20, 24, 24, 24));
 
-        double totalUsd = movRepo.findByInvestimento(inv.getId()).stream()
+        // Saldo all-time (posição atual)
+        List<Movimentacao> todasMovs = movRepo.findByInvestimento(inv.getId());
+        double totalUsd = todasMovs.stream()
                 .mapToDouble(m -> m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor())
                 .sum();
+        double cotVenda  = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorVenda).orElse(0.0);
         double cotCompra = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
-        double cotVenda = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorVenda).orElse(0.0);
         double brlCompra = totalUsd * cotCompra;
-        double brlVenda = totalUsd * cotVenda;
+        double brlVenda  = totalUsd * cotVenda;
+
+        // CMC = Σ(usd × cotação) / Σ(usd) — apenas depósitos com cotação registrada, sempre all-time
+        double totalBrlPago = 0, totalUsdComprado = 0;
+        for (Movimentacao m : todasMovs) {
+            if (m.getTipoMov() == TipoMovimentacao.DEPOSITO && m.getCotacaoDolar() != null) {
+                totalBrlPago    += m.getValor() * m.getCotacaoDolar();
+                totalUsdComprado += m.getValor();
+            }
+        }
+        double cmc = totalUsdComprado > 0 ? totalBrlPago / totalUsdComprado : 0;
+        String cmcStr = cmc > 0 ? "R$ " + FormatUtil.numero(cmc, 4) : "—";
 
         GridPane grid = new GridPane();
         grid.setHgap(12); grid.setVgap(12);
         ColumnConstraints cc = new ColumnConstraints(); cc.setPercentWidth(25); cc.setHgrow(Priority.ALWAYS);
         for (int i = 0; i < 4; i++) grid.getColumnConstraints().add(cc);
 
-        grid.add(metricCard("Saldo (USD)", "$ " + FormatUtil.numero(totalUsd, 4), "neutral"), 0, 0);
-        grid.add(metricCard("Cotação Compra", "R$ " + FormatUtil.numero(cotCompra, 4), "neutral"), 1, 0);
-        grid.add(metricCard("Valor (compra)", FormatUtil.brl(brlCompra), "neutral"), 2, 0);
-        grid.add(metricCard("Valor (venda)", FormatUtil.brl(brlVenda), "neutral"), 3, 0);
+        if (anoSelecionado != ANO_TODOS) {
+            // Aportado líquido no ano selecionado
+            double aportadoAno = movRepo.findByInvestimentoEAno(inv.getId(), anoSelecionado).stream()
+                    .mapToDouble(m -> m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor())
+                    .sum();
 
-        // Movimentações
-        Label movTitle = new Label("Movimentações");
+            grid.add(metricCard("Saldo Total (USD)", "$ " + FormatUtil.numero(totalUsd, 4), "neutral"), 0, 0);
+            grid.add(metricCard("Aportado " + anoSelecionado + " (USD)", "$ " + FormatUtil.numero(aportadoAno, 4), "neutral"), 1, 0);
+            grid.add(metricCard("CMC", cmcStr, "neutral"), 2, 0);
+            grid.add(metricCard("Valor BRL (compra)", FormatUtil.brl(brlCompra), "neutral"), 3, 0);
+        } else {
+            grid.add(metricCard("Saldo Total (USD)", "$ " + FormatUtil.numero(totalUsd, 4), "neutral"), 0, 0);
+            grid.add(metricCard("CMC", cmcStr, "neutral"), 1, 0);
+            grid.add(metricCard("Valor BRL (compra)", FormatUtil.brl(brlCompra), "neutral"), 2, 0);
+            grid.add(metricCard("Valor BRL (venda)", FormatUtil.brl(brlVenda), "neutral"), 3, 0);
+        }
+
+        // Movimentações filtradas
+        String movLabel = (anoSelecionado != ANO_TODOS)
+                ? "Movimentações — " + anoSelecionado
+                : "Movimentações — Total";
+        Label movTitle = new Label(movLabel);
         movTitle.getStyleClass().add("section-title");
 
         TableView<Movimentacao> movTable = new TableView<>();
@@ -138,7 +201,9 @@ public class DolarDetalhePanel extends BorderPane {
         });
 
         TableColumn<Movimentacao, Void> cAcoes = new TableColumn<>("Ações");
-        cAcoes.setPrefWidth(150);
+        cAcoes.setMinWidth(160);
+        cAcoes.setPrefWidth(160);
+        cAcoes.setMaxWidth(160);
         cAcoes.setCellFactory(tc -> new TableCell<>() {
             final Button edit = new Button("✏ Editar");
             final Button del  = new Button("🗑 Excluir");
@@ -147,6 +212,8 @@ public class DolarDetalhePanel extends BorderPane {
                 del.getStyleClass().add("btn-danger");
                 edit.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
                 del.setStyle("-fx-font-size: 15px; -fx-padding: 3 8;");
+                edit.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+                del.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
                 edit.setOnAction(e -> {
                     Movimentacao m = getTableView().getItems().get(getIndex());
                     new DolarMovFormDialog(inv, m, movRepo).showAndWait();
@@ -162,8 +229,10 @@ public class DolarDetalhePanel extends BorderPane {
         });
 
         movTable.getColumns().addAll(cPer, cTipo, cValor, cCot, cBrl, cAcoes);
-        java.util.List<Movimentacao> movs = movRepo.findByInvestimento(inv.getId());
-        java.util.Collections.reverse(movs);
+        List<Movimentacao> movs = (anoSelecionado != ANO_TODOS)
+                ? movRepo.findByInvestimentoEAno(inv.getId(), anoSelecionado)
+                : new ArrayList<>(todasMovs);
+        Collections.reverse(movs);
         movTable.getItems().addAll(movs);
 
         content.getChildren().addAll(grid, movTitle, movTable);
@@ -173,6 +242,7 @@ public class DolarDetalhePanel extends BorderPane {
     private VBox metricCard(String title, String value, String style) {
         VBox card = new VBox(4); card.getStyleClass().add("card");
         Label t = new Label(title); t.getStyleClass().add("card-title");
+        GlossarioTooltip.aplicar(t, title);
         Label v = new Label(value); v.getStyleClass().addAll("card-value-sm", style);
         card.getChildren().addAll(t, v);
         return card;

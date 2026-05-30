@@ -70,13 +70,13 @@ public class DolarMovFormDialog extends Dialog<Void> {
             try {
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
-                double valor = Double.parseDouble(fValor.getText().strip().replace(",", "."));
+                double valor = InputUtil.parseDoubleField(fValor.getText());
 
                 mov.setInvestimentoId(inv.getId());
                 mov.setTipoMov(fTipo.getValue());
                 mov.setPeriodoMes(mes); mov.setPeriodoAno(ano);
                 mov.setValor(valor);
-                mov.setCotacaoDolar(!fCot.getText().isBlank() ? Double.parseDouble(fCot.getText().strip().replace(",", ".")) : null);
+                mov.setCotacaoDolar(!fCot.getText().isBlank() ? InputUtil.parseDoubleField(fCot.getText()) : null);
                 mov.setNotas(fNotas.getText().strip().isEmpty() ? null : fNotas.getText().strip());
                 movRepo.salvar(mov);
             } catch (NumberFormatException ex) {

@@ -69,7 +69,7 @@ public class MovimentacaoFormDialog extends Dialog<Boolean> {
             try {
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
-                double valor = Double.parseDouble(fValor.getText().strip().replace(",", "."));
+                double valor = InputUtil.parseDoubleField(fValor.getText());
                 if (valor <= 0) {
                     errLabel.setText("Valor deve ser positivo.");
                     e.consume();

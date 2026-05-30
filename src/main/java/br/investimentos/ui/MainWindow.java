@@ -8,20 +8,20 @@ import br.investimentos.ui.dolar.DolarListPanel;
 import br.investimentos.ui.gastos.GastosPanel;
 import br.investimentos.ui.rendafixa.RendaFixaListPanel;
 import br.investimentos.ui.rendavariavel.RendaVariavelListPanel;
+import br.investimentos.service.ImportExportService;
 import br.investimentos.ui.transacao.TransacaoPanel;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.Toast;
+import java.io.IOException;
+import java.io.InputStream;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import br.investimentos.ui.util.UIUtil;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.PixelReader;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 
@@ -43,6 +43,7 @@ public class MainWindow {
     private final RendaVariavelService rvSvc;
     private final SaldoService saldoSvc;
     private final ProjecaoService projecaoSvc;
+    private final VaiService vaiSvc;
     private final AlertaService alertaSvc;
     private final ConsolidacaoService consolSvc;
     private final CotacaoService cotacaoSvc;
@@ -55,7 +56,7 @@ public class MainWindow {
                       GastoRepository gastoRepo,
                       TaxaService taxaSvc, RendimentoService rendSvc,
                       RendaVariavelService rvSvc, SaldoService saldoSvc,
-                      ProjecaoService projecaoSvc, AlertaService alertaSvc,
+                      ProjecaoService projecaoSvc, VaiService vaiSvc, AlertaService alertaSvc,
                       ConsolidacaoService consolSvc, CotacaoService cotacaoSvc,
                       GastosService gastosSvc) {
         this.stage = stage;
@@ -63,7 +64,7 @@ public class MainWindow {
         this.vtaRepo = vtaRepo; this.vacRepo = vacRepo; this.vaiRepo = vaiRepo;
         this.gastoRepo = gastoRepo;
         this.taxaSvc = taxaSvc; this.rendSvc = rendSvc; this.rvSvc = rvSvc;
-        this.saldoSvc = saldoSvc; this.projecaoSvc = projecaoSvc;
+        this.saldoSvc = saldoSvc; this.projecaoSvc = projecaoSvc; this.vaiSvc = vaiSvc;
         this.alertaSvc = alertaSvc; this.consolSvc = consolSvc; this.cotacaoSvc = cotacaoSvc;
         this.gastosSvc = gastosSvc;
 
@@ -91,7 +92,7 @@ public class MainWindow {
 
     private Node makeRendaFixa() {
         return new RendaFixaListPanel(invRepo, movRepo, vtaRepo, vaiRepo,
-                rendSvc, taxaSvc, saldoSvc, this::loadPanel);
+                rendSvc, taxaSvc, saldoSvc, vaiSvc, this::loadPanel);
     }
 
     private Node makeRendaVariavel() {
@@ -103,7 +104,8 @@ public class MainWindow {
     }
 
     private Node makeTransacoes() {
-        return new TransacaoPanel(invRepo, movRepo, aporteRepo);
+        ImportExportService impExpSvc = new ImportExportService(invRepo, movRepo, vtaRepo, vaiRepo, aporteRepo, vacRepo);
+        return new TransacaoPanel(invRepo, movRepo, aporteRepo, impExpSvc);
     }
 
     private Node makeGastos() {
@@ -111,40 +113,17 @@ public class MainWindow {
     }
 
     private ImageView loadSidebarIcon(String resourcePath, int size) {
-        Image original = new Image(
-            getClass().getResourceAsStream(resourcePath),
-            size * 2, size * 2, true, true
-        );
-        int w = (int) original.getWidth();
-        int h = (int) original.getHeight();
-        WritableImage result = new WritableImage(w, h);
-        PixelReader reader = original.getPixelReader();
-        PixelWriter writer = result.getPixelWriter();
-        Color target = Color.web("#adbac7");
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                Color px = reader.getColor(x, y);
-                double lum = 0.299 * px.getRed() + 0.587 * px.getGreen() + 0.114 * px.getBlue();
-                double alpha = (1.0 - lum) * px.getOpacity();
-                if (alpha > 0.05) {
-                    writer.setColor(x, y, new Color(
-                        target.getRed(), target.getGreen(), target.getBlue(),
-                        Math.min(alpha, 1.0)
-                    ));
-                } else {
-                    writer.setColor(x, y, Color.TRANSPARENT);
-                }
-            }
-        }
-        ImageView iv = new ImageView(result);
-        iv.setFitWidth(size);
-        iv.setFitHeight(size);
-        iv.setSmooth(true);
-        return iv;
+        return UIUtil.loadTintedIcon(getClass(), resourcePath, size);
     }
 
     public void loadPanel(Node panel) {
         contentArea.getChildren().setAll(panel);
+    }
+
+    private void carregarIcones(Stage stage) {
+        try (InputStream s = getClass().getResourceAsStream("/icons/logo-s.png")) {
+            if (s != null) stage.getIcons().add(new Image(s));
+        } catch (IOException ignored) {}
     }
 
     public void show() {
@@ -158,6 +137,7 @@ public class MainWindow {
         scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
 
         stage.setTitle("Sifin — Painel de Investimentos");
+        carregarIcones(stage);
         stage.setScene(scene);
         stage.setMinWidth(800);
         stage.setMinHeight(600);

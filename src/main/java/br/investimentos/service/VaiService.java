@@ -74,6 +74,23 @@ public class VaiService {
         return 0;
     }
 
+    /**
+     * Chamado após salvar um VTA de um ano anterior ao ano atual.
+     * Recalcula o VAI do ano seguinte ao VTA salvo = último VTA disponível do ano do VTA.
+     */
+    public void recalcularVaiDoAnoSeguinte(int investimentoId, int anoVta) {
+        int anoSeguinte = anoVta + 1;
+        Optional<VtaMensal> ultimoVtaOpt = vtaRepo.findUltimoDoAno(investimentoId, anoVta);
+        if (ultimoVtaOpt.isEmpty()) return;
+
+        double novoVai = ultimoVtaOpt.get().getVta();
+        VaiAnual vai = new VaiAnual();
+        vai.setInvestimentoId(investimentoId);
+        vai.setAno(anoSeguinte);
+        vai.setVai(novoVai);
+        vaiRepo.salvar(vai);
+    }
+
     private void setConfig(String chave, String valor) {
         String sql = "INSERT INTO configuracoes (chave,valor) VALUES (?,?) ON CONFLICT(chave) DO UPDATE SET valor=excluded.valor";
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {

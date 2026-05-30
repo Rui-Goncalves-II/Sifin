@@ -98,7 +98,9 @@ public class RendaVariavelListPanel extends BorderPane {
         colLeb.setPrefWidth(160);
 
         TableColumn<Investimento, Void> colAcoes = new TableColumn<>("Ações");
+        colAcoes.setMinWidth(120);
         colAcoes.setPrefWidth(120);
+        colAcoes.setMaxWidth(120);
         colAcoes.setCellFactory(tc -> new TableCell<>() {
             final Button btnVer = new Button("👁");
             final Button btnOp = new Button("+ Op.");
@@ -107,6 +109,7 @@ public class RendaVariavelListPanel extends BorderPane {
                 btnVer.getStyleClass().add("btn-icon");
                 btnOp.getStyleClass().add("btn-secondary");
                 btnOp.setStyle("-fx-padding: 4 8; -fx-font-size: 15px;");
+                btnOp.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
                 btnVer.setOnAction(e -> navigate.accept(new RendaVariavelDetalhePanel(
                         getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, navigate)));
                 btnOp.setOnAction(e -> {

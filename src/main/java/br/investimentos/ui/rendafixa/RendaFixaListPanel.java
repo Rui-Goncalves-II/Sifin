@@ -23,6 +23,7 @@ public class RendaFixaListPanel extends BorderPane {
     private final RendimentoService rendSvc;
     private final TaxaService taxaSvc;
     private final SaldoService saldoSvc;
+    private final VaiService vaiSvc;
     private final Consumer<Node> navigate;
 
     private TableView<Investimento> table;
@@ -30,10 +31,10 @@ public class RendaFixaListPanel extends BorderPane {
     public RendaFixaListPanel(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
                                VtaMensalRepository vtaRepo, VaiAnualRepository vaiRepo,
                                RendimentoService rendSvc, TaxaService taxaSvc,
-                               SaldoService saldoSvc, Consumer<Node> navigate) {
+                               SaldoService saldoSvc, VaiService vaiSvc, Consumer<Node> navigate) {
         this.invRepo = invRepo; this.movRepo = movRepo; this.vtaRepo = vtaRepo;
         this.vaiRepo = vaiRepo; this.rendSvc = rendSvc; this.taxaSvc = taxaSvc;
-        this.saldoSvc = saldoSvc; this.navigate = navigate;
+        this.saldoSvc = saldoSvc; this.vaiSvc = vaiSvc; this.navigate = navigate;
         construir();
     }
 
@@ -102,9 +103,9 @@ public class RendaFixaListPanel extends BorderPane {
                 btnEdit.getStyleClass().add("btn-icon");
                 btnVer.setOnAction(e -> navigate.accept(new RendaFixaDetalhePanel(
                         getTableView().getItems().get(getIndex()), invRepo, movRepo, vtaRepo,
-                        vaiRepo, rendSvc, taxaSvc, saldoSvc, navigate)));
+                        vaiRepo, rendSvc, taxaSvc, saldoSvc, vaiSvc, navigate)));
                 btnVta.setOnAction(e -> {
-                    new VtaFormDialog(getTableView().getItems().get(getIndex()), vtaRepo, vaiRepo, rendSvc).showAndWait();
+                    new VtaFormDialog(getTableView().getItems().get(getIndex()), vtaRepo, vaiRepo, rendSvc, vaiSvc).showAndWait();
                     refresh();
                 });
                 btnEdit.setOnAction(e -> abrirForm(getTableView().getItems().get(getIndex())));
@@ -120,7 +121,7 @@ public class RendaFixaListPanel extends BorderPane {
         table.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2 && table.getSelectionModel().getSelectedItem() != null) {
                 Investimento inv = table.getSelectionModel().getSelectedItem();
-                navigate.accept(new RendaFixaDetalhePanel(inv, invRepo, movRepo, vtaRepo, vaiRepo, rendSvc, taxaSvc, saldoSvc, navigate));
+                navigate.accept(new RendaFixaDetalhePanel(inv, invRepo, movRepo, vtaRepo, vaiRepo, rendSvc, taxaSvc, saldoSvc, vaiSvc, navigate));
             }
         });
 

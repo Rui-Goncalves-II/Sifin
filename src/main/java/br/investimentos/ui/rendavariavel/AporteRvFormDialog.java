@@ -69,8 +69,8 @@ public class AporteRvFormDialog extends Dialog<Void> {
         // Auto-calcula valor ao preencher qtd e preço
         Runnable calcValor = () -> {
             try {
-                double qtd = Double.parseDouble(fQtd.getText().strip().replace(",", "."));
-                double preco = Double.parseDouble(fPreco.getText().strip().replace(",", "."));
+                double qtd = InputUtil.parseDoubleField(fQtd.getText());
+                double preco = InputUtil.parseDoubleField(fPreco.getText());
                 fValor.setText(String.format("%.2f", qtd * preco));
             } catch (NumberFormatException ignored) {}
         };
@@ -99,7 +99,7 @@ public class AporteRvFormDialog extends Dialog<Void> {
             try {
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
-                double valor = Double.parseDouble(fValor.getText().strip().replace(",", "."));
+                double valor = InputUtil.parseDoubleField(fValor.getText());
                 TipoOperacaoRv tipo = fTipo.getValue();
 
                 aporte.setInvestimentoId(inv.getId());
@@ -110,8 +110,8 @@ public class AporteRvFormDialog extends Dialog<Void> {
                 aporte.setQuantidade(null);
                 aporte.setPrecoPorCota(null);
                 if (tipo != TipoOperacaoRv.DIVIDENDO) {
-                    if (!fQtd.getText().isBlank()) aporte.setQuantidade(Double.parseDouble(fQtd.getText().strip().replace(",", ".")));
-                    if (!fPreco.getText().isBlank()) aporte.setPrecoPorCota(Double.parseDouble(fPreco.getText().strip().replace(",", ".")));
+                    if (!fQtd.getText().isBlank()) aporte.setQuantidade(InputUtil.parseDoubleField(fQtd.getText()));
+                    if (!fPreco.getText().isBlank()) aporte.setPrecoPorCota(InputUtil.parseDoubleField(fPreco.getText()));
                 }
                 aporteRepo.salvar(aporte);
             } catch (NumberFormatException ex) {

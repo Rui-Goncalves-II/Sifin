@@ -33,20 +33,18 @@ public class RendaVariavelService {
     public Posicao calcular(int investimentoId) {
         List<AporteRv> aportes = aporteRepo.findByInvestimento(investimentoId);
 
-        double vtp = 0, qtdCompra = 0, qtdVenda = 0, d = 0;
+        double vtp = 0, qtdCompra = 0, d = 0;
         for (AporteRv a : aportes) {
             if (a.getTipoOp() == TipoOperacaoRv.COMPRA) {
                 vtp += a.getValor();
                 qtdCompra += a.getQuantidade() != null ? a.getQuantidade() : 0;
-            } else if (a.getTipoOp() == TipoOperacaoRv.VENDA) {
-                qtdVenda += a.getQuantidade() != null ? a.getQuantidade() : 0;
             } else if (a.getTipoOp() == TipoOperacaoRv.DIVIDENDO) {
                 d += a.getValor();
             }
         }
 
-        double qc = Math.max(0, qtdCompra - qtdVenda);
-        double vma = qc > 0 ? vtp / qtdCompra : 0;
+        double qc = calcularQc(aportes);
+        double vma = qtdCompra > 0 ? vtp / qtdCompra : 0;
 
         Optional<VacMensal> vacOpt = vacRepo.findUltimo(investimentoId);
         double vac = vacOpt.map(VacMensal::getVac).orElse(0.0);

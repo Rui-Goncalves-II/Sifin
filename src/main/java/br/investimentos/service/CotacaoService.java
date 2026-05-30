@@ -51,8 +51,7 @@ public class CotacaoService {
         String hoje = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
 
         Optional<CotacaoDolar> cacheOpt = cotacaoRepo.findByData(hoje);
-        if (cacheOpt.isPresent() && cotacaoAtual != null &&
-                hoje.equals(cotacaoAtual.getData()) && !deveRefrescar()) {
+        if (cacheOpt.isPresent() && cotacaoAtual != null && hoje.equals(cotacaoAtual.getData())) {
             return;
         }
 
@@ -81,11 +80,4 @@ public class CotacaoService {
         }
     }
 
-    private boolean deveRefrescar() {
-        return false;
-    }
-
-    public void encerrar() {
-        scheduler.shutdownNow();
-    }
 }

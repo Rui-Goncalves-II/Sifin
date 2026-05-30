@@ -111,7 +111,7 @@ public class RendaFixaFormDialog extends Dialog<Void> {
             toSave.setTipo(TipoInvestimento.RENDA_FIXA);
             toSave.setSubtipo(fSub.getValue() != null && !fSub.getValue().isBlank() ? fSub.getValue() : null);
             toSave.setIndexador(fIdx.getValue() != null && !fIdx.getValue().isBlank() ? fIdx.getValue() : null);
-            String taxaTxt = fTaxa.getText().strip().replace(",", ".");
+            String taxaTxt = InputUtil.normalizeDecimalInput(fTaxa.getText());
             if (!taxaTxt.isEmpty()) {
                 try { toSave.setTaxaAnual(Double.parseDouble(taxaTxt)); }
                 catch (NumberFormatException ex) { errLabel.setText("Taxa inválida."); e.consume(); return; }

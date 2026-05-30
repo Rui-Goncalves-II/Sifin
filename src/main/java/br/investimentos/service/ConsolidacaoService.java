@@ -31,6 +31,7 @@ public class ConsolidacaoService {
     private final InvestimentoRepository invRepo;
     private final MovimentacaoRepository movRepo;
     private final VtaMensalRepository vtaRepo;
+    private final VaiAnualRepository vaiRepo;
     private final AporteRvRepository aporteRepo;
     private final VacMensalRepository vacRepo;
     private final RendimentoService rendimentoService;
@@ -45,12 +46,14 @@ public class ConsolidacaoService {
     ) {}
 
     public ConsolidacaoService(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
-                                VtaMensalRepository vtaRepo, AporteRvRepository aporteRepo,
+                                VtaMensalRepository vtaRepo, VaiAnualRepository vaiRepo,
+                                AporteRvRepository aporteRepo,
                                 VacMensalRepository vacRepo, RendimentoService rendimentoService,
                                 RendaVariavelService rvService) {
         this.invRepo = invRepo;
         this.movRepo = movRepo;
         this.vtaRepo = vtaRepo;
+        this.vaiRepo = vaiRepo;
         this.aporteRepo = aporteRepo;
         this.vacRepo = vacRepo;
         this.rendimentoService = rendimentoService;
@@ -70,14 +73,26 @@ public class ConsolidacaoService {
             for (Investimento inv : invRepo.findByTipo(TipoInvestimento.RENDA_FIXA)) {
                 List<VtaMensal> vtas = todos ? vtaRepo.findByInvestimento(inv.getId())
                         : vtaRepo.findByInvestimentoEAno(inv.getId(), ano);
+
                 if (todos) {
+                    // Capital = total histórico de depósitos líquidos
+                    double depositosTotal = 0;
                     for (var mov : movRepo.findByInvestimento(inv.getId()))
-                        viarf += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
+                        depositosTotal += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
+                    viarf += depositosTotal;
+                    // Rendimento all-time = último VTA − total depositado
+                    if (!vtas.isEmpty())
+                        rarf += vtas.get(vtas.size() - 1).getVta() - depositosTotal;
                 } else {
+                    // Capital = VAI (saldo de abertura do ano) + depósitos líquidos do ano
+                    double vai = vaiRepo.getVai(inv.getId(), ano);
+                    double sam = 0;
                     for (var mov : movRepo.findByInvestimentoEAno(inv.getId(), ano))
-                        viarf += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
+                        sam += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
+                    viarf += vai + sam;
+                    // Rendimento = VTA − (VAI + SAM)
+                    if (!vtas.isEmpty()) rarf += rendimentoService.calcularR(vtas.get(vtas.size() - 1));
                 }
-                if (!vtas.isEmpty()) rarf += rendimentoService.calcularR(vtas.get(vtas.size() - 1));
             }
         }
 
@@ -108,79 +123,24 @@ public class ConsolidacaoService {
                 vtia, vtra, pta, pcpa, prat, todos);
     }
 
-    public ResultadoConsolidado calcular(int ano) {
-        boolean todos = ano == ANO_TODOS;
-
-        // VIARF: Σ depósitos líquidos RF
-        double viarf = 0;
-        // RARF: Σ rendimentos RF (último R de cada ativo no ano)
-        double rarf = 0;
-
-        List<Investimento> rfList = invRepo.findByTipo(TipoInvestimento.RENDA_FIXA);
-        for (Investimento inv : rfList) {
-            List<VtaMensal> vtas;
-            if (todos) {
-                vtas = vtaRepo.findByInvestimento(inv.getId());
-            } else {
-                vtas = vtaRepo.findByInvestimentoEAno(inv.getId(), ano);
-            }
-
-            // VIARF: soma movimentações (depósitos - saques)
-            if (todos) {
-                for (var mov : movRepo.findByInvestimento(inv.getId())) {
-                    viarf += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
-                }
-            } else {
-                for (var mov : movRepo.findByInvestimentoEAno(inv.getId(), ano)) {
-                    viarf += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
-                }
-            }
-
-            // RARF: último VTA do período
-            if (!vtas.isEmpty()) {
-                VtaMensal ultimo = vtas.get(vtas.size() - 1);
-                rarf += rendimentoService.calcularR(ultimo);
+    public double calcularAportesDoAno(int ano, Set<TipoInvestimento> tipos) {
+        boolean todos = (ano == ANO_TODOS);
+        double total = 0;
+        for (Investimento inv : invRepo.findAll()) {
+            if (!tipos.contains(inv.getTipo())) continue;
+            if (inv.getTipo() == TipoInvestimento.RENDA_FIXA || inv.getTipo() == TipoInvestimento.DOLAR) {
+                var movs = todos ? movRepo.findByInvestimento(inv.getId())
+                                 : movRepo.findByInvestimentoEAno(inv.getId(), ano);
+                for (var mov : movs)
+                    if (mov.getTipoMov() == TipoMovimentacao.DEPOSITO) total += mov.getValor();
+            } else if (inv.getTipo() == TipoInvestimento.RENDA_VARIAVEL) {
+                var aportes = todos ? aporteRepo.findByInvestimento(inv.getId())
+                                    : aporteRepo.findByInvestimentoEAno(inv.getId(), ano);
+                for (var a : aportes)
+                    if (a.getTipoOp() == TipoOperacaoRv.COMPRA) total += a.getValor();
             }
         }
-
-        double vtarf = viarf + rarf;
-
-        // VIARV: Σ COMPRAs RV no ano
-        double viarv = 0;
-        double dta = 0;
-        double parv = 0;
-
-        List<Investimento> rvList = invRepo.findByTipo(TipoInvestimento.RENDA_VARIAVEL);
-        for (Investimento inv : rvList) {
-            var aportes = todos ? aporteRepo.findByInvestimento(inv.getId())
-                    : aporteRepo.findByInvestimentoEAno(inv.getId(), ano);
-            for (var a : aportes) {
-                if (a.getTipoOp() == TipoOperacaoRv.COMPRA) viarv += a.getValor();
-                else if (a.getTipoOp() == TipoOperacaoRv.DIVIDENDO) dta += a.getValor();
-            }
-            // PARV: sempre valor atual
-            var pos = rvService.calcular(inv.getId());
-            parv += pos.vac() * pos.qc();
-        }
-
-        double vtarv = parv + dta;
-        double vtia = viarf + viarv;
-        double vtra = rarf + dta;
-        double pta = vtarf + vtarv;
-
-        Double pcpa = pta > 0 ? (vtra / pta) * 100 : null;
-        Double prat = vtia > 0 ? (vtra / vtia) * 100 : null;
-
-        return new ResultadoConsolidado(
-                viarf, rarf, vtarf,
-                viarv, parv, dta, vtarv,
-                vtia, vtra, pta,
-                pcpa, prat, todos
-        );
-    }
-
-    public double calcularAportesDoMes(int mes, int ano) {
-        return calcularAportesDoMes(mes, ano, EnumSet.allOf(TipoInvestimento.class));
+        return total;
     }
 
     public double calcularAportesDoMes(int mes, int ano, Set<TipoInvestimento> tipos) {
@@ -199,14 +159,6 @@ public class ConsolidacaoService {
     }
 
     public record VtraMensal(int mes, int ano, double vtra) {}
-
-    /**
-     * Retorna VTRA real por mês, incluindo apenas meses com dados (RF com VTA ou RV com dividendo).
-     * Chave de ordenação: ano*100+mes para ordenação natural.
-     */
-    public List<VtraMensal> calcularVtraPorMes(int ano) {
-        return calcularVtraPorMes(ano, EnumSet.allOf(TipoInvestimento.class));
-    }
 
     public List<VtraMensal> calcularVtraPorMes(int ano, Set<TipoInvestimento> tipos) {
         boolean todos = (ano == ANO_TODOS);
@@ -328,15 +280,7 @@ public class ConsolidacaoService {
                     .mapToDouble(VacMensal::getVac)
                     .reduce(0.0, (a, b) -> b);
                 if (vac <= 0) continue;
-                double qc = 0;
-                for (AporteRv ap : aportesMap.getOrDefault(invId, List.of())) {
-                    if (ap.getPeriodoAno() * 100 + ap.getPeriodoMes() > chave) continue;
-                    if (ap.getTipoOp() == TipoOperacaoRv.COMPRA && ap.getQuantidade() != null)
-                        qc += ap.getQuantidade();
-                    else if (ap.getTipoOp() == TipoOperacaoRv.VENDA && ap.getQuantidade() != null)
-                        qc -= ap.getQuantidade();
-                }
-                pta += Math.max(0, qc) * vac;
+                pta += calcularQcAteChave(aportesMap.getOrDefault(invId, List.of()), chave) * vac;
             }
 
             // Dólar: saldo USD acumulado até este mês × cotação atual
@@ -451,15 +395,7 @@ public class ConsolidacaoService {
                         .filter(v -> v.getPeriodoAno() * 100 + v.getPeriodoMes() <= chave)
                         .mapToDouble(VacMensal::getVac).reduce(0.0, (x, y) -> y);
                 if (vac > 0) {
-                    double qc = 0;
-                    for (AporteRv ap : apMap.getOrDefault(id, List.of())) {
-                        if (ap.getPeriodoAno() * 100 + ap.getPeriodoMes() > chave) continue;
-                        if (ap.getTipoOp() == TipoOperacaoRv.COMPRA && ap.getQuantidade() != null)
-                            qc += ap.getQuantidade();
-                        else if (ap.getTipoOp() == TipoOperacaoRv.VENDA && ap.getQuantidade() != null)
-                            qc -= ap.getQuantidade();
-                    }
-                    total += Math.max(0, qc) * vac;
+                    total += calcularQcAteChave(apMap.getOrDefault(id, List.of()), chave) * vac;
                 }
             }
 
@@ -480,6 +416,18 @@ public class ConsolidacaoService {
 
         resultado.sort((x, y) -> (x.ano() * 100 + x.mes()) - (y.ano() * 100 + y.mes()));
         return resultado;
+    }
+
+    private double calcularQcAteChave(List<AporteRv> aportes, int chave) {
+        double qc = 0;
+        for (AporteRv ap : aportes) {
+            if (ap.getPeriodoAno() * 100 + ap.getPeriodoMes() > chave) continue;
+            if (ap.getTipoOp() == TipoOperacaoRv.COMPRA && ap.getQuantidade() != null)
+                qc += ap.getQuantidade();
+            else if (ap.getTipoOp() == TipoOperacaoRv.VENDA && ap.getQuantidade() != null)
+                qc -= ap.getQuantidade();
+        }
+        return Math.max(0, qc);
     }
 
     public List<Integer> anosComDados() {

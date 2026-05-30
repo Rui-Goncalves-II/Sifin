@@ -32,6 +32,20 @@ public final class GlossarioTooltip {
         SIGLAS.put("VTARV", "VTARV — Valor Total Acumulado em Renda Variável\n= PARV + DTA");
         SIGLAS.put("Crescimento Patrimonial",    "PCPA — Percentual de Crescimento Patrimonial\n= (VTRA / PTA) × 100");
         SIGLAS.put("Rendimento sobre Investido", "PRAT — Percentual de Rendimento sobre Investido\n= (VTRA / VTIA) × 100");
+        // ── KPI cards do Dashboard ───────────────────────────────────────
+        SIGLAS.put("Patrimônio Total",  "Patrimônio Total (PTA)\n= VTARF + VTARV + Dólar\nSoma de todos os ativos a valor atual de mercado.");
+        SIGLAS.put("Total Investido",   "Total Investido (VTIA)\n= VIARF + VIARV\nCapital líquido efetivamente aplicado no período.");
+        SIGLAS.put("Ganho / Perda",     "Ganho / Perda (VTRA)\n= RARF + DTA\nRendimentos de Renda Fixa + Dividendos de Renda Variável.");
+        SIGLAS.put("Aportado",          "Aportado no período\n= Σ Depósitos RF + Dólar + Σ Compras RV\nTotal bruto investido, sem descontar saques ou vendas.");
+        // ── Mini cards do Dashboard ───────────────────────────────────────
+        SIGLAS.put("Renda Fixa",        "Renda Fixa\nValor principal: VIARF — capital líquido investido (depósitos − saques).\nSubtexto: RARF — rendimentos acumulados no período.");
+        SIGLAS.put("Renda Variável",    "Renda Variável\nValor principal: PARV — patrimônio atual (VAC × QC).\nSubtexto: dividendos recebidos no período.");
+        SIGLAS.put("Dólar",             "Dólar\nValor total da posição em USD convertido para BRL pela cotação de compra atual.");
+        // ── Gastos KPI cards ──────────────────────────────────────────────
+        SIGLAS.put("Gastos Totais",     "Gastos Totais (GT)\n= GAT + GDT + GMT\nSoma de todos os gastos do período.");
+        SIGLAS.put("Alimentar",         "Gastos Alimentares (GAT)\n= Σ gastos da categoria Alimentar no período.");
+        SIGLAS.put("Diversos",          "Gastos Diversos (GDT)\n= Σ gastos da categoria Diversos no período.");
+        SIGLAS.put("Mensalidades",      "Mensalidades (GMT)\n= Σ (meses ativos × valor) de cada mensalidade no período.");
         // ── Renda Fixa ───────────────────────────────────────────────────
         SIGLAS.put("VTA",   "VTA — Valor Total Atual\nValor real do investimento informado no mês");
         SIGLAS.put("VAI",   "VAI — Valor Atual Inicial\nSaldo de 31/12 do ano anterior (base do cálculo anual)");
@@ -49,6 +63,8 @@ public final class GlossarioTooltip {
         SIGLAS.put("LEA",   "LEA — Lucro/Prejuízo Estimado Acumulado\n= LEB + Dividendos");
         SIGLAS.put("LEA %", "LEA % — Rentabilidade Acumulada com Dividendos\n= (LEA / VTP) × 100");
         SIGLAS.put("D",     "D — Dividendos\n= Σ valores de todos os dividendos recebidos");
+        // ── Dólar ────────────────────────────────────────────────────────
+        SIGLAS.put("CMC",   "CMC — Cotação Média de Compra\n= Σ (USD × cotação_compra) / Σ USD\nCusto médio ponderado pelo volume de cada depósito.\nSempre calculado sobre todas as movimentações.");
         // ── Gastos ───────────────────────────────────────────────────────
         SIGLAS.put("GAT",   "GAT — Gastos Alimentares\n= Σ gastos da categoria Alimentar no período");
         SIGLAS.put("GDT",   "GDT — Gastos Diversos\n= Σ gastos da categoria Diversos no período");

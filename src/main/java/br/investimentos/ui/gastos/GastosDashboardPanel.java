@@ -91,11 +91,13 @@ public class GastosDashboardPanel extends BorderPane {
         double gdt = svc.calcularGDT(anoSelecionado);
         double gmt = svc.calcularGMT(anoSelecionado);
         double gt  = gat + gdt + gmt;
+        double gmp = svc.calcularGMP();
 
         List<ResumoMensal> porMes = svc.calcularPorMes(anoSelecionado);
 
         contentBox.getChildren().clear();
         contentBox.getChildren().add(buildKpiRow(gt, gat, gdt, gmt));
+        contentBox.getChildren().add(buildGmpCard(gmp));
         contentBox.getChildren().add(buildMultiLineChart(porMes));
         contentBox.getChildren().add(buildTotalLineChart(porMes));
         contentBox.getChildren().add(buildTabelaMensal(porMes));
@@ -137,6 +139,33 @@ public class GastosDashboardPanel extends BorderPane {
 
         card.getChildren().addAll(lbl, val, sub);
         return card;
+    }
+
+    // ── GMP card ─────────────────────────────────────────────────────────
+
+    private HBox buildGmpCard(double gmp) {
+        int anoAtual = java.time.LocalDate.now().getYear();
+
+        VBox card = new VBox(6);
+        card.getStyleClass().add("kpi-card");
+        card.setStyle("-fx-border-color: #2a3441 #2a3441 #2a3441 #3fb950; " +
+                "-fx-border-width: 1 1 1 3; -fx-border-radius: 0 10 10 0; -fx-background-radius: 0 10 10 0;");
+
+        Label lbl = new Label("Previsão de mensalidades para " + anoAtual);
+        lbl.getStyleClass().add("kpi-label");
+
+        Label val = new Label(FormatUtil.brl(gmp));
+        val.getStyleClass().add("kpi-value");
+
+        Label sub = new Label("GMP — do início até Dez/" + anoAtual);
+        sub.getStyleClass().add("card-label");
+
+        card.getChildren().addAll(lbl, val, sub);
+        card.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(card, Priority.ALWAYS);
+
+        HBox row = new HBox(card);
+        return row;
     }
 
     // ── Gráfico multi-série (GAT + GDT + GMT) ────────────────────────────

@@ -13,13 +13,19 @@ import java.time.LocalDate;
 
 public class VacFormDialog extends Dialog<Void> {
 
+    /** Novo registro — período padrão = mês/ano atual. */
     public VacFormDialog(Investimento inv, VacMensalRepository vacRepo) {
-        setTitle("Atualizar VAC — " + inv.getNome());
+        this(inv, vacRepo, null);
+    }
+
+    /** Edição de registro existente — período pré-preenchido e bloqueado. */
+    public VacFormDialog(Investimento inv, VacMensalRepository vacRepo, VacMensal existente) {
+        setTitle((existente == null ? "Atualizar" : "Editar") + " VAC — " + inv.getNome());
         initModality(Modality.APPLICATION_MODAL);
 
         LocalDate hoje = LocalDate.now();
-        int mesAtual = hoje.getMonthValue();
-        int anoAtual = hoje.getYear();
+        int mesInicial = existente != null ? existente.getPeriodoMes() : hoje.getMonthValue();
+        int anoInicial = existente != null ? existente.getPeriodoAno() : hoje.getYear();
 
         GridPane form = new GridPane();
         form.setHgap(12); form.setVgap(10);
@@ -28,11 +34,18 @@ public class VacFormDialog extends Dialog<Void> {
 
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
-        fMes.setValue(mesAtual);
+        fMes.setValue(mesInicial);
         TextField fAno = new TextField();
         fAno.setPrefWidth(80);
         InputUtil.applyIntegerFilter(fAno);
-        fAno.setText(String.valueOf(anoAtual));
+        fAno.setText(String.valueOf(anoInicial));
+
+        // Ao editar, período é fixo
+        if (existente != null) {
+            fMes.setDisable(true);
+            fAno.setDisable(true);
+        }
+
         HBox periodoBox = new HBox(8, fMes, new Label("/ "), fAno);
         periodoBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         addRow(form, 0, "Período", periodoBox);
@@ -42,8 +55,12 @@ public class VacFormDialog extends Dialog<Void> {
         fVac.setPromptText("Ex: 12,50");
         addRow(form, 1, "VAC (R$) *", fVac);
 
-        vacRepo.find(inv.getId(), mesAtual, anoAtual).ifPresent(v ->
-                fVac.setText(String.valueOf(v.getVac()).replace(".", ",")));
+        if (existente != null) {
+            fVac.setText(String.valueOf(existente.getVac()).replace(".", ","));
+        } else {
+            vacRepo.find(inv.getId(), mesInicial, anoInicial).ifPresent(v ->
+                    fVac.setText(String.valueOf(v.getVac()).replace(".", ",")));
+        }
 
         Label errLabel = new Label();
         errLabel.setStyle("-fx-text-fill: #c62828;");
@@ -56,8 +73,8 @@ public class VacFormDialog extends Dialog<Void> {
             try {
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
-                double vac = Double.parseDouble(fVac.getText().strip().replace(",", "."));
-                VacMensal v = new VacMensal();
+                double vac = InputUtil.parseDoubleField(fVac.getText());
+                VacMensal v = existente != null ? existente : new VacMensal();
                 v.setInvestimentoId(inv.getId());
                 v.setPeriodoMes(mes);
                 v.setPeriodoAno(ano);

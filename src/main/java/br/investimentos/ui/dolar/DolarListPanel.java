@@ -73,7 +73,9 @@ public class DolarListPanel extends BorderPane {
         colBrl.setPrefWidth(140);
 
         TableColumn<Investimento, Void> colAcoes = new TableColumn<>("Ações");
-        colAcoes.setPrefWidth(120);
+        colAcoes.setMinWidth(80);
+        colAcoes.setPrefWidth(80);
+        colAcoes.setMaxWidth(80);
         colAcoes.setCellFactory(tc -> new TableCell<>() {
             final Button btnVer = new Button("👁");
             final Button btnEdit = new Button("✏");

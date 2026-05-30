@@ -274,34 +274,55 @@ CREATE TABLE IF NOT EXISTS gastos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tipo TEXT NOT NULL,           -- ALIMENTAR | DIVERSO | MENSALIDADE
     descricao TEXT NOT NULL,
-    periodo_mes INTEGER NOT NULL,
-    periodo_ano INTEGER NOT NULL,
+    periodo_mes INTEGER,          -- ALIMENTAR/DIVERSO: mês do gasto; MENSALIDADE: mês de início
+    periodo_ano INTEGER,          -- ALIMENTAR/DIVERSO: ano do gasto;  MENSALIDADE: ano de início
+    fim_mes INTEGER,              -- MENSALIDADE apenas: mês em que foi encerrada (NULL = ativa)
+    fim_ano INTEGER,              -- MENSALIDADE apenas: ano em que foi encerrada  (NULL = ativa)
     valor REAL NOT NULL,
     notas TEXT,
+    parcelas_total INTEGER DEFAULT 1,
+    parcela_numero INTEGER DEFAULT 1,
+    grupo_parcela TEXT,
     criado_em TEXT DEFAULT (datetime('now','localtime'))
 );
 ```
+
+**Regras:**  
+- ALIMENTAR/DIVERSO sempre têm `periodo_mes` e `periodo_ano`; `fim_*` são sempre NULL.  
+- MENSALIDADE tem `periodo_mes/periodo_ano` = mês/ano de início da assinatura; `fim_*` = mês/ano em que foi encerrada (NULL enquanto ativa).  
+- Mensalidades **nunca são deletadas** — ao encerrar, setar `fim_mes`/`fim_ano`; dados históricos permanecem.
+
+### Comportamento das Mensalidades
+
+- Contabilizada a partir do mês de início, mês a mês conforme o tempo passa.
+- "Virou o mês" = mês é contabilizado (não conta meses futuros).
+- Persiste de ano em ano até que o usuário encerre.
+- Encerramento: `fim_mes/fim_ano` = mês corrente (último mês contabilizado inclusive).
 
 ### Variáveis do Dashboard de Gastos
 
 | Variável | Fórmula |
 |---|---|
-| GAT | Σ valor WHERE tipo='ALIMENTAR' AND ano = filtro |
-| GDT | Σ valor WHERE tipo='DIVERSO' AND ano = filtro |
-| GMT | Σ valor WHERE tipo='MENSALIDADE' AND ano = filtro |
+| GAT | Σ valor WHERE tipo='ALIMENTAR' AND periodo_ano = filtro |
+| GDT | Σ valor WHERE tipo='DIVERSO' AND periodo_ano = filtro |
+| GMT | Σ (meses_ativos_no_período × valor) para cada mensalidade — meses ≤ mês atual para ano corrente |
+| GMP | Σ (meses_desde_início_até_dezembro × valor) para mensalidades ativas — projeção ano corrente |
 | GT | GAT + GDT + GMT |
 
-Filtro anual: mesmo padrão do dashboard de investimentos — botões por ano com dados + "Todos os anos" (sentinela `-1`).  
-Modo "Todos os anos": GAT/GDT/GMT/GT somam todos os registros históricos.
+**GMT** conta apenas meses decorridos. Para o ano corrente: do início da mensalidade (ou Jan se já existia) até o mês atual. Para anos anteriores: todos os meses em que estava ativa.  
+**GMP** (Gasto Mensal Previsto) = do mês de início da mensalidade no ano corrente até Dezembro × valor. Não depende do mês atual — é projeção anual. Exibido sempre como card extra no dashboard.
+
+Filtro anual: botões por anos com dados em ALIMENTAR/DIVERSO + "Todos os anos" (sentinela `-1`).  
+`anosComDados` usa `WHERE periodo_ano IS NOT NULL` (ignora mensalidades que não têm data nesse campo via bug legado).
 
 ### Layout do Dashboard de Gastos
 
 ```
 [◀ 2024] [2025] [Todos os anos]
 
-┌─ GT ─┬─ GAT ─┬─ GDT ─┬─ GMT ─┐
-│Total │Aliment│Divers │Mensali│
-└──────┴───────┴───────┴───────┘
+┌─ GT ─┬─ GAT ─┬─ GDT ─┬─ GMT ─┬─ GMP ─┐
+│Total │Aliment│Divers │Mensali│Previsto│
+└──────┴───────┴───────┴───────┴────────┘
 
 [Linha: GAT + GDT + GMT por mês — 3 séries]
 [Linha: GT por mês — 1 série]
@@ -309,37 +330,49 @@ Modo "Todos os anos": GAT/GDT/GMT/GT somam todos os registros históricos.
 Tabela: Mês | Alimentar | Diversos | Mensalidades | Total
 ```
 
+GMP: "Previsão de mensalidades para [ano corrente]: R$ X,XX"
+
 ### Sub-abas do Painel de Gastos
 
 | Aba | Conteúdo |
 |---|---|
-| Dashboard | KPIs + gráficos + tabela resumo mensal |
+| Dashboard | KPIs + GMP card + gráficos + tabela resumo mensal |
 | Alimentar | Lista de gastos ALIMENTAR + botão adicionar |
 | Diversos | Lista de gastos DIVERSO + botão adicionar |
-| Mensalidades | Lista de gastos MENSALIDADE + botão adicionar |
+| Mensalidades | Lista de mensalidades (ativas e encerradas) + botão adicionar |
 
-Cada aba de lista: tabela com colunas Descrição / Mês / Ano / Valor / Notas / Ações (editar, excluir).  
-Formulário de gasto: descrição (uppercase), mês (inteiro 1-12), ano (inteiro), valor (decimal BR), notas.  
-Exclusão direta permitida (gastos não têm histórico encadeado).
+**Alimentar / Diversos** — tabela: Descrição / Mês / Ano / Valor / Notas / Ações (editar, excluir).  
+Formulário: descrição (uppercase), mês (1-12), ano (inteiro), valor (decimal BR), notas.
+
+**Mensalidades** — tabela: Descrição / Início / Valor/mês / Status / Notas / Ações.  
+- Status: "Ativa" (verde) ou "Encerrada MM/AAAA" (cinza).  
+- Ação principal: **Encerrar** (seta fim = mês atual, sem deletar). Botão **Remover** com aviso de perda histórica.  
+- Formulário: descrição (uppercase), mês de início (1-12), ano de início, valor mensal (decimal BR), notas.
 
 ### Estrutura de Pacotes — Gastos
 
 ```
 model/
-  Gasto.java
+  Gasto.java                   -- periodoMes/Ano e fimMes/Ano são Integer (nullable)
+                               --   isAtivaEm(mes, ano): boolean
   enums/TipoGasto.java         -- ALIMENTAR | DIVERSO | MENSALIDADE
 
 repository/
-  GastoRepository.java         -- save, delete, findAll, findByAno, findByTipoEAno, anosComDados
+  GastoRepository.java         -- salvar, deletar, findMensalidades(),
+                               --   findByTipoEAno(tipo, ano), anosComDados,
+                               --   encerrar(id, fimMes, fimAno)
 
 service/
-  GastosService.java           -- calcularGAT/GDT/GMT/GT(ano), calcularPorMesETipo(ano)
+  GastosService.java           -- calcularGAT/GDT/GMT/GT(ano), calcularGMP(),
+                               --   calcularPorMes(ano)
 
 ui/gastos/
   GastosPanel.java             -- TabPane: Dashboard | Alimentar | Diversos | Mensalidades
-  GastosDashboardPanel.java    -- KPIs + 2 gráficos de linha + tabela mensal
-  GastosListPanel.java         -- lista genérica filtrada por TipoGasto
-  GastoFormDialog.java         -- formulário de criação/edição de gasto
+  GastosDashboardPanel.java    -- KPIs (GT+GAT+GDT+GMT) + GMP card + gráficos + tabela
+  GastosListPanel.java         -- lista ALIMENTAR/DIVERSO (com período, parcelamento)
+  MensalidadesListPanel.java   -- lista MENSALIDADE (início, status ativa/encerrada)
+  GastoFormDialog.java         -- formulário ALIMENTAR/DIVERSO (com período)
+  MensalidadeFormDialog.java   -- formulário MENSALIDADE (início: mes+ano + valor)
 ```
 
 ### Tarefas de Implementação

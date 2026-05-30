@@ -86,7 +86,9 @@ public class GastosListPanel extends BorderPane {
                 c.getValue().getNotas() != null ? c.getValue().getNotas() : ""));
 
         TableColumn<Gasto, Void> cAcoes = new TableColumn<>("Ações");
-        cAcoes.setPrefWidth(130);
+        cAcoes.setMinWidth(148);
+        cAcoes.setPrefWidth(148);
+        cAcoes.setMaxWidth(148);
         cAcoes.setCellFactory(col -> new TableCell<>() {
             private final Button btnEdit = new Button("Editar");
             private final Button btnDel  = new Button("Excluir");
@@ -94,6 +96,8 @@ public class GastosListPanel extends BorderPane {
             {
                 btnEdit.getStyleClass().add("btn-secondary");
                 btnDel.getStyleClass().add("btn-danger");
+                btnEdit.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+                btnDel.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
                 box.setAlignment(Pos.CENTER);
                 btnEdit.setOnAction(e -> abrirForm(getTableView().getItems().get(getIndex())));
                 btnDel.setOnAction(e -> excluir(getTableView().getItems().get(getIndex())));

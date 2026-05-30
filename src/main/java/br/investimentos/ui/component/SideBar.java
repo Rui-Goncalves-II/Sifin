@@ -4,8 +4,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -50,8 +51,11 @@ public class SideBar extends VBox {
         setMinWidth(56);
         setMaxWidth(56);
 
-        Label logo = new Label("S");
-        logo.getStyleClass().add("nav-logo");
+        ImageView logo = new ImageView(new Image(SideBar.class.getResourceAsStream("/icons/logo-s.png")));
+        logo.setFitWidth(44);
+        logo.setFitHeight(44);
+        logo.setPreserveRatio(true);
+        logo.setSmooth(true);
         VBox logoBox = new VBox(logo);
         logoBox.setAlignment(Pos.CENTER);
         logoBox.setPadding(new Insets(14, 0, 10, 0));

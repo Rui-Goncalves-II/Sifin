@@ -6,6 +6,7 @@ import br.investimentos.model.Movimentacao;
 import br.investimentos.repository.AporteRvRepository;
 import br.investimentos.repository.InvestimentoRepository;
 import br.investimentos.repository.MovimentacaoRepository;
+import br.investimentos.service.ImportExportService;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.InputUtil;
 import javafx.beans.property.SimpleStringProperty;
@@ -13,7 +14,12 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 
+import java.io.File;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,6 +33,7 @@ public class TransacaoPanel extends BorderPane {
     private final InvestimentoRepository invRepo;
     private final MovimentacaoRepository movRepo;
     private final AporteRvRepository aporteRepo;
+    private final ImportExportService importExportSvc;
 
     private List<LinhaTransacao> todasLinhas = new ArrayList<>();
     private TableView<LinhaTransacao> table;
@@ -42,10 +49,11 @@ public class TransacaoPanel extends BorderPane {
     record LinhaTransacao(int periodoMes, int periodoAno, String ativo, String tipoAtivo, String tipo, double valor, String notas) {}
 
     public TransacaoPanel(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
-                          AporteRvRepository aporteRepo) {
+                          AporteRvRepository aporteRepo, ImportExportService importExportSvc) {
         this.invRepo = invRepo;
         this.movRepo = movRepo;
         this.aporteRepo = aporteRepo;
+        this.importExportSvc = importExportSvc;
         construir();
     }
 
@@ -55,7 +63,19 @@ public class TransacaoPanel extends BorderPane {
         header.setAlignment(Pos.CENTER_LEFT);
         Label title = new Label("🔄 Transações");
         title.getStyleClass().add("page-title");
-        header.getChildren().add(title);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button btnExportar = new Button("⬇ Exportar CSV");
+        btnExportar.getStyleClass().add("btn-secondary");
+        btnExportar.setOnAction(e -> exportarCSV());
+
+        Button btnImportar = new Button("⬆ Importar CSV");
+        btnImportar.getStyleClass().add("btn-primary");
+        btnImportar.setOnAction(e -> importarCSV());
+
+        header.getChildren().addAll(title, spacer, btnExportar, btnImportar);
         setTop(header);
 
         carregarDados();
@@ -71,6 +91,78 @@ public class TransacaoPanel extends BorderPane {
         setCenter(scroll);
 
         aplicarFiltros();
+    }
+
+    private void exportarCSV() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Salvar backup CSV");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Arquivo CSV", "*.csv"));
+        String hoje = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        fc.setInitialFileName("sifin_backup_" + hoje + ".csv");
+        File arquivo = fc.showSaveDialog(getScene().getWindow());
+        if (arquivo == null) return;
+        try {
+            importExportSvc.exportar(arquivo);
+            Alert ok = new Alert(Alert.AlertType.INFORMATION);
+            ok.setTitle("Exportação concluída");
+            ok.setHeaderText(null);
+            ok.setContentText("Dados exportados com sucesso para:\n" + arquivo.getAbsolutePath());
+            ok.showAndWait();
+        } catch (IOException ex) {
+            Alert err = new Alert(Alert.AlertType.ERROR);
+            err.setTitle("Erro ao exportar");
+            err.setHeaderText(null);
+            err.setContentText("Falha ao exportar: " + ex.getMessage());
+            err.showAndWait();
+        }
+    }
+
+    private void importarCSV() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Selecionar backup CSV");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Arquivo CSV", "*.csv"));
+        File arquivo = fc.showOpenDialog(getScene().getWindow());
+        if (arquivo == null) return;
+
+        Alert aviso = new Alert(Alert.AlertType.CONFIRMATION);
+        aviso.setTitle("Importar dados");
+        aviso.setHeaderText("Atenção");
+        aviso.setContentText(
+            "Os dados do arquivo serão adicionados ao banco atual.\n" +
+            "Se já existirem registros idênticos, podem ser criados duplicados.\n\n" +
+            "Deseja continuar?");
+        if (aviso.showAndWait().filter(r -> r == ButtonType.OK).isEmpty()) return;
+
+        try {
+            ImportExportService.ImportResult res = importExportSvc.importar(arquivo);
+            carregarDados();
+            recarregarFiltroAno();
+            aplicarFiltros();
+            Alert ok = new Alert(Alert.AlertType.INFORMATION);
+            ok.setTitle("Importação concluída");
+            ok.setHeaderText(null);
+            ok.setContentText(res.toMessage());
+            ok.showAndWait();
+        } catch (Exception ex) {
+            Alert err = new Alert(Alert.AlertType.ERROR);
+            err.setTitle("Erro ao importar");
+            err.setHeaderText(null);
+            err.setContentText("Falha ao importar: " + ex.getMessage());
+            err.showAndWait();
+        }
+    }
+
+    private void recarregarFiltroAno() {
+        String anoAtual = cbAno.getValue();
+        cbAno.getItems().clear();
+        cbAno.getItems().add("Todos");
+        todasLinhas.stream()
+            .map(LinhaTransacao::periodoAno)
+            .distinct()
+            .sorted(Comparator.reverseOrder())
+            .map(String::valueOf)
+            .forEach(cbAno.getItems()::add);
+        cbAno.setValue(cbAno.getItems().contains(anoAtual) ? anoAtual : "Todos");
     }
 
     private VBox buildFiltros() {
@@ -183,7 +275,7 @@ public class TransacaoPanel extends BorderPane {
         String nome = fNome.getText().trim().toLowerCase();
         String tipoAtivo = cbTipoAtivo.getValue();
         String tipoTrans = cbTipoTransacao.getValue();
-        int mesSel = Arrays.asList(MESES_NOME).indexOf(cbMes.getValue()); // 0 = Todos, 1-12 = mês
+        int mesSel = Arrays.asList(MESES_NOME).indexOf(cbMes.getValue());
         String anoSel = cbAno.getValue();
         double valMin = parseValor(fValorMin.getText());
         double valMax = parseValor(fValorMax.getText());
@@ -203,7 +295,7 @@ public class TransacaoPanel extends BorderPane {
 
     private double parseValor(String text) {
         if (text == null || text.isBlank()) return -1;
-        try { return Double.parseDouble(text.replace(",", ".")); }
+        try { return InputUtil.parseDoubleField(text); }
         catch (NumberFormatException e) { return -1; }
     }
 

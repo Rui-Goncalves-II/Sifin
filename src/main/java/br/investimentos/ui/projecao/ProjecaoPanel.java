@@ -5,6 +5,7 @@ import br.investimentos.model.enums.TipoInvestimento;
 import br.investimentos.repository.InvestimentoRepository;
 import br.investimentos.service.ProjecaoService;
 import br.investimentos.ui.util.FormatUtil;
+import br.investimentos.ui.util.InputUtil;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -126,7 +127,7 @@ public class ProjecaoPanel extends BorderPane {
         }
         double aporte;
         try {
-            aporte = Double.parseDouble(tfAporte.getText().replace(",", ".").trim());
+            aporte = InputUtil.parseDoubleField(tfAporte.getText());
         } catch (NumberFormatException ex) {
             new Alert(Alert.AlertType.WARNING, "Valor de aporte inválido.").showAndWait();
             return;

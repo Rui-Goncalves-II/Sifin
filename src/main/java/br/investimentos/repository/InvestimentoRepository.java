@@ -76,6 +76,16 @@ public class InvestimentoRepository {
         return list;
     }
 
+    public List<Investimento> findAllInclArquivados() {
+        String sql = "SELECT * FROM investimentos ORDER BY tipo, nome";
+        List<Investimento> list = new ArrayList<>();
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) list.add(map(rs));
+        } catch (SQLException e) { throw new RuntimeException(e); }
+        return list;
+    }
+
     public void arquivar(int id) {
         String sql = "UPDATE investimentos SET ativo=0, atualizado_em=datetime('now','localtime') WHERE id=?";
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {

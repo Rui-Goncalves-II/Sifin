@@ -44,7 +44,9 @@ public class DatabaseManager {
         String[] cols = {
             "ALTER TABLE gastos ADD COLUMN parcelas_total INTEGER DEFAULT 1",
             "ALTER TABLE gastos ADD COLUMN parcela_numero INTEGER DEFAULT 1",
-            "ALTER TABLE gastos ADD COLUMN grupo_parcela TEXT"
+            "ALTER TABLE gastos ADD COLUMN grupo_parcela TEXT",
+            "ALTER TABLE gastos ADD COLUMN fim_mes INTEGER",
+            "ALTER TABLE gastos ADD COLUMN fim_ano INTEGER"
         };
         try (Connection conn = DriverManager.getConnection(url);
              Statement st = conn.createStatement()) {
@@ -53,6 +55,60 @@ public class DatabaseManager {
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to run migrations", e);
+        }
+        migrateGastosPeriodoNullable();
+    }
+
+    private void migrateGastosPeriodoNullable() {
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement st = conn.createStatement()) {
+            boolean needsMigration = false;
+            try (java.sql.ResultSet rs = st.executeQuery("PRAGMA table_info(gastos)")) {
+                while (rs.next()) {
+                    if ("periodo_mes".equals(rs.getString("name")) && rs.getInt("notnull") == 1) {
+                        needsMigration = true;
+                        break;
+                    }
+                }
+            }
+            if (!needsMigration) return;
+
+            conn.setAutoCommit(false);
+            try {
+                st.execute("ALTER TABLE gastos RENAME TO gastos_old");
+                st.execute(
+                    "CREATE TABLE gastos (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "tipo TEXT NOT NULL, " +
+                    "descricao TEXT NOT NULL, " +
+                    "periodo_mes INTEGER, " +
+                    "periodo_ano INTEGER, " +
+                    "fim_mes INTEGER, " +
+                    "fim_ano INTEGER, " +
+                    "valor REAL NOT NULL, " +
+                    "notas TEXT, " +
+                    "parcelas_total INTEGER DEFAULT 1, " +
+                    "parcela_numero INTEGER DEFAULT 1, " +
+                    "grupo_parcela TEXT, " +
+                    "criado_em TEXT DEFAULT (datetime('now','localtime'))" +
+                    ")"
+                );
+                st.execute(
+                    "INSERT INTO gastos (id,tipo,descricao,periodo_mes,periodo_ano,valor,notas," +
+                    "parcelas_total,parcela_numero,grupo_parcela,criado_em) " +
+                    "SELECT id,tipo,descricao,periodo_mes,periodo_ano,valor,notas," +
+                    "parcelas_total,parcela_numero,grupo_parcela,criado_em FROM gastos_old"
+                );
+                st.execute("DROP TABLE gastos_old");
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Migration failed: gastos periodo nullable", e);
         }
     }
 
@@ -63,8 +119,6 @@ public class DatabaseManager {
                     .lines().collect(Collectors.joining("\n"));
             try (Connection conn = DriverManager.getConnection(url);
                  Statement st = conn.createStatement()) {
-                st.execute("PRAGMA foreign_keys = ON");
-                st.execute("PRAGMA journal_mode = WAL");
                 for (String stmt : sql.split(";")) {
                     String trimmed = stmt.strip();
                     if (!trimmed.isEmpty()) st.execute(trimmed);
