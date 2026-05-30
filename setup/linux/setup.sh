@@ -138,7 +138,7 @@ ok "run.sh pronto"
 
 # ── 7. Atalho na área de trabalho ─────────────────────────────────────────────
 if [[ "$OS" == "Linux" ]]; then
-    ICON_SRC="$PROJECT_DIR/src/main/resources/icons/renda-passiva.png"
+    ICON_SRC="$PROJECT_DIR/src/main/resources/icons/logo-s-256.png"
     ICON_DEST="$HOME/.local/share/icons/sifin.png"
     mkdir -p "$HOME/.local/share/icons"
     cp "$ICON_SRC" "$ICON_DEST"
