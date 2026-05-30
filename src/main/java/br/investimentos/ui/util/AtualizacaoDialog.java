@@ -39,8 +39,8 @@ public class AtualizacaoDialog {
         header.setAlignment(Pos.CENTER_LEFT);
 
         // ── Body ─────────────────────────────────────────────────────
-        Label versaoLbl = new Label("v" + versaoNova + " disponível  •  atual: v" + versaoAtual);
-        versaoLbl.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 15px;");
+        Label versaoLbl = new Label("remoto: " + versaoNova + "  •  local: " + versaoAtual);
+        versaoLbl.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 15px; -fx-font-family: monospace;");
 
         Label descLbl = new Label("Deseja atualizar agora? O aplicativo será recompilado e reiniciado automaticamente.");
         descLbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 15px;");

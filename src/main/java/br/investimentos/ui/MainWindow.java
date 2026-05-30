@@ -149,14 +149,16 @@ public class MainWindow {
         stage.show();
 
         var atualizacaoSvc = new AtualizacaoService();
-        atualizacaoSvc.verificarAtualizacaoAsync(tagName ->
+        atualizacaoSvc.verificarAtualizacaoAsync(commitRemoto -> {
+            String localCache = atualizacaoSvc.getCommitLocalCache();
+            String localShort = localCache != null ? localCache.substring(0, 7) : "local";
             Platform.runLater(() -> AtualizacaoDialog.show(
                 stage,
-                atualizacaoSvc.getVersaoAtual(),
-                tagName,
+                localShort,
+                commitRemoto,
                 AtualizacaoService.getReleaseUrl()
-            ))
-        );
+            ));
+        });
 
         cotacaoSvc.iniciarRefreshAutomatico(cot -> Platform.runLater(() -> {
             if (!contentArea.getChildren().isEmpty() &&
