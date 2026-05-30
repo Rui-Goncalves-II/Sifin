@@ -61,6 +61,8 @@ else
     if [[ "$OS" == "Linux" ]]; then
         if command -v apt-get &>/dev/null; then
             info "Adicionando repositório Adoptium (Eclipse Temurin)..."
+            # Remove entrada antiga (pode ter codinome errado de tentativa anterior)
+            sudo rm -f /etc/apt/sources.list.d/adoptium.list
             sudo apt-get update -q
             sudo apt-get install -y wget apt-transport-https gnupg
             wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public \
