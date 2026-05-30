@@ -28,6 +28,22 @@ if [[ "$OS" != "Linux" && "$OS" != "Darwin" ]]; then
     die "Este script suporta Linux e macOS. No Windows use setup/windows/setup.ps1."
 fi
 
+# Retorna o codinome correto para o repositório Adoptium.
+# Mint e Pop!OS retornam seu próprio codinome via lsb_release, mas o Adoptium
+# só conhece os codinomes Ubuntu/Debian. UBUNTU_CODENAME (em /etc/os-release)
+# sempre contém o codinome da base Ubuntu nessas distros.
+get_apt_codename() {
+    local cn
+    # 1ª opção: UBUNTU_CODENAME (Ubuntu, Mint, Pop!OS, etc.)
+    cn=$(grep "^UBUNTU_CODENAME=" /etc/os-release 2>/dev/null | cut -d= -f2)
+    [[ -n "$cn" ]] && echo "$cn" && return
+    # 2ª opção: VERSION_CODENAME genérico (Debian, etc.)
+    cn=$(grep "^VERSION_CODENAME=" /etc/os-release 2>/dev/null | cut -d= -f2)
+    [[ -n "$cn" ]] && echo "$cn" && return
+    # Fallback seguro: noble (Ubuntu 24.04 LTS)
+    echo "noble"
+}
+
 # ── 2. Java ───────────────────────────────────────────────────────────────────
 check_java() {
     if command -v java &>/dev/null; then
@@ -46,11 +62,13 @@ else
         if command -v apt-get &>/dev/null; then
             info "Adicionando repositório Adoptium (Eclipse Temurin)..."
             sudo apt-get update -q
-            sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+            sudo apt-get install -y wget apt-transport-https gnupg
             wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public \
                 | sudo gpg --dearmor -o /usr/share/keyrings/adoptium.gpg
+            ADOPTIUM_CODENAME="$(get_apt_codename)"
+            info "Usando codinome para repositório Adoptium: $ADOPTIUM_CODENAME"
             echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] \
-https://packages.adoptium.net/artifactory/deb $(lsb_release -cs) main" \
+https://packages.adoptium.net/artifactory/deb ${ADOPTIUM_CODENAME} main" \
                 | sudo tee /etc/apt/sources.list.d/adoptium.list
             sudo apt-get update -q
             sudo apt-get install -y temurin-17-jdk
