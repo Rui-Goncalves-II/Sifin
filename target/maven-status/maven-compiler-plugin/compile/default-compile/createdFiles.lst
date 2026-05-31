@@ -61,5 +61,6 @@ br/investimentos/repository/VtaMensalRepository.class
 br/investimentos/model/VacMensal.class
 br/investimentos/model/enums/TipoOperacaoRv$1.class
 br/investimentos/ui/transacao/TransacaoPanel.class
+br/investimentos/ui/configuracoes/ConfiguracoesPanel.class
 br/investimentos/ui/projecao/ProjecaoPanel.class
 br/investimentos/ui/dolar/DolarListPanel.class

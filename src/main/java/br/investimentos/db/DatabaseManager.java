@@ -112,6 +112,33 @@ public class DatabaseManager {
         }
     }
 
+    public void limparBancoDados() {
+        String[] tabelas = {
+            "vac_mensal", "aportes_rv", "vta_mensal", "vai_anual",
+            "movimentacoes", "investimentos",
+            "gastos", "cotacoes_dolar", "configuracoes"
+        };
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement st = conn.createStatement()) {
+            st.execute("PRAGMA foreign_keys = OFF");
+            conn.setAutoCommit(false);
+            try {
+                for (String tabela : tabelas) {
+                    st.execute("DELETE FROM " + tabela);
+                }
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+                st.execute("PRAGMA foreign_keys = ON");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao limpar banco de dados", e);
+        }
+    }
+
     private void initSchema() {
         try (InputStream is = getClass().getResourceAsStream("/db/schema.sql")) {
             if (is == null) throw new RuntimeException("schema.sql not found");

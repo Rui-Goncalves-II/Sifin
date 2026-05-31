@@ -3,6 +3,7 @@ package br.investimentos.ui.transacao;
 import br.investimentos.model.AporteRv;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.Movimentacao;
+import br.investimentos.db.DatabaseManager;
 import br.investimentos.repository.AporteRvRepository;
 import br.investimentos.repository.InvestimentoRepository;
 import br.investimentos.repository.MovimentacaoRepository;
@@ -71,11 +72,15 @@ public class TransacaoPanel extends BorderPane {
         btnExportar.getStyleClass().add("btn-secondary");
         btnExportar.setOnAction(e -> exportarCSV());
 
+        Button btnRestaurar = new Button("↺ Restaurar backup");
+        btnRestaurar.getStyleClass().add("btn-warning");
+        btnRestaurar.setOnAction(e -> restaurarBackup());
+
         Button btnImportar = new Button("⬆ Importar CSV");
         btnImportar.getStyleClass().add("btn-primary");
         btnImportar.setOnAction(e -> importarCSV());
 
-        header.getChildren().addAll(title, spacer, btnExportar, btnImportar);
+        header.getChildren().addAll(title, spacer, btnExportar, btnRestaurar, btnImportar);
         setTop(header);
 
         carregarDados();
@@ -148,6 +153,43 @@ public class TransacaoPanel extends BorderPane {
             err.setTitle("Erro ao importar");
             err.setHeaderText(null);
             err.setContentText("Falha ao importar: " + ex.getMessage());
+            err.showAndWait();
+        }
+    }
+
+    private void restaurarBackup() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Selecionar backup CSV");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Arquivo CSV", "*.csv"));
+        File arquivo = fc.showOpenDialog(getScene().getWindow());
+        if (arquivo == null) return;
+
+        Alert aviso = new Alert(Alert.AlertType.CONFIRMATION);
+        aviso.setTitle("Restaurar backup");
+        aviso.setHeaderText("Todos os dados atuais serão apagados.");
+        aviso.setContentText(
+            "Esta operação apaga TODOS os investimentos, movimentações e gastos existentes " +
+            "e os substitui pelos dados do arquivo selecionado.\n\n" +
+            "Use esta opção apenas para restaurar um backup completo.\n\n" +
+            "Deseja continuar?");
+        if (aviso.showAndWait().filter(r -> r == ButtonType.OK).isEmpty()) return;
+
+        try {
+            DatabaseManager.getInstance().limparBancoDados();
+            ImportExportService.ImportResult res = importExportSvc.importar(arquivo);
+            carregarDados();
+            recarregarFiltroAno();
+            aplicarFiltros();
+            Alert ok = new Alert(Alert.AlertType.INFORMATION);
+            ok.setTitle("Restauração concluída");
+            ok.setHeaderText(null);
+            ok.setContentText(res.toMessage());
+            ok.showAndWait();
+        } catch (Exception ex) {
+            Alert err = new Alert(Alert.AlertType.ERROR);
+            err.setTitle("Erro ao restaurar");
+            err.setHeaderText(null);
+            err.setContentText("Falha ao restaurar backup: " + ex.getMessage());
             err.showAndWait();
         }
     }
@@ -276,7 +318,7 @@ public class TransacaoPanel extends BorderPane {
         String tipoAtivo = cbTipoAtivo.getValue();
         String tipoTrans = cbTipoTransacao.getValue();
         int mesSel = Arrays.asList(MESES_NOME).indexOf(cbMes.getValue());
-        String anoSel = cbAno.getValue();
+        String anoSel = cbAno.getValue() != null ? cbAno.getValue() : "Todos";
         double valMin = parseValor(fValorMin.getText());
         double valMax = parseValor(fValorMax.getText());
 

@@ -35,6 +35,7 @@
 /home/goncalves/IdeaProjects/Sifin/src/main/java/br/investimentos/service/VaiService.java
 /home/goncalves/IdeaProjects/Sifin/src/main/java/br/investimentos/ui/MainWindow.java
 /home/goncalves/IdeaProjects/Sifin/src/main/java/br/investimentos/ui/component/SideBar.java
+/home/goncalves/IdeaProjects/Sifin/src/main/java/br/investimentos/ui/configuracoes/ConfiguracoesPanel.java
 /home/goncalves/IdeaProjects/Sifin/src/main/java/br/investimentos/ui/dashboard/DashboardPanel.java
 /home/goncalves/IdeaProjects/Sifin/src/main/java/br/investimentos/ui/dolar/DolarDetalhePanel.java
 /home/goncalves/IdeaProjects/Sifin/src/main/java/br/investimentos/ui/dolar/DolarFormDialog.java

@@ -9,6 +9,7 @@ import br.investimentos.ui.gastos.GastosPanel;
 import br.investimentos.ui.rendafixa.RendaFixaListPanel;
 import br.investimentos.ui.rendavariavel.RendaVariavelListPanel;
 import br.investimentos.service.ImportExportService;
+import br.investimentos.ui.configuracoes.ConfiguracoesPanel;
 import br.investimentos.ui.transacao.TransacaoPanel;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.service.AtualizacaoService;
@@ -32,6 +33,7 @@ public class MainWindow {
     private final Stage stage;
     private final StackPane contentArea;
     private final SideBar sidebar;
+    private StackPane rootLayer;
 
     private final InvestimentoRepository invRepo;
     private final MovimentacaoRepository movRepo;
@@ -82,6 +84,7 @@ public class MainWindow {
         sidebar.addItem(new SideBar.NavItem(null, loadSidebarIcon("/icons/dinheiro.png", 22), "Gastos", () -> loadPanel(makeGastos()), false));
         sidebar.addItem(new SideBar.NavItem("⇄", "Transações", () -> loadPanel(makeTransacoes())));
         sidebar.addSpacer();
+        sidebar.addItem(new SideBar.NavItem(null, loadSidebarIcon("/icons/configuracoes.png", 22), "Configurações", () -> loadPanel(makeConfiguracoes()), false));
 
         loadPanel(makeDashboard());
         sidebar.activateFirst();
@@ -114,6 +117,10 @@ public class MainWindow {
         return new GastosPanel(gastoRepo, gastosSvc);
     }
 
+    private Node makeConfiguracoes() {
+        return new ConfiguracoesPanel(this::loadPanel, this::makeDashboard, rootLayer);
+    }
+
     private ImageView loadSidebarIcon(String resourcePath, int size) {
         return UIUtil.loadTintedIcon(getClass(), resourcePath, size);
     }
@@ -136,7 +143,7 @@ public class MainWindow {
         root.setLeft(sidebar);
         root.setCenter(contentArea);
 
-        StackPane rootLayer = new StackPane(root);
+        rootLayer = new StackPane(root);
 
         Scene scene = new Scene(rootLayer, 1280, 768);
         scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
