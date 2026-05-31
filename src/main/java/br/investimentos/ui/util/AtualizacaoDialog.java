@@ -122,7 +122,7 @@ public class AtualizacaoDialog {
         dialog.sizeToScene();
 
         CompletableFuture.runAsync(() -> {
-            boolean ok = runCmd(logArea, appHome, "git", "-C", appHome, "pull");
+            boolean ok = runCmd(logArea, appHome, "git", "-C", appHome, "pull", "--autostash");
             if (ok) {
                 appendLog(logArea, "\nCompilando…\n");
                 ok = runCmd(logArea, appHome, "mvn", "-f", appHome + "/pom.xml",
