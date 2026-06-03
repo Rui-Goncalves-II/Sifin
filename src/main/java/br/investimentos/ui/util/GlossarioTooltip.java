@@ -64,7 +64,12 @@ public final class GlossarioTooltip {
         SIGLAS.put("LEA %", "LEA % — Rentabilidade Acumulada com Dividendos\n= (LEA / VTP) × 100");
         SIGLAS.put("D",     "D — Dividendos\n= Σ valores de todos os dividendos recebidos");
         // ── Dólar ────────────────────────────────────────────────────────
-        SIGLAS.put("CMC",   "CMC — Cotação Média de Compra\n= Σ (USD × cotação_compra) / Σ USD\nCusto médio ponderado pelo volume de cada depósito.\nSempre calculado sobre todas as movimentações.");
+        SIGLAS.put("CMC",             "CMC — Cotação Média de Compra\n= Σ (USD × cotação_compra) / Σ USD\nCusto médio ponderado pelo volume de cada depósito.\nSempre calculado sobre todas as movimentações.");
+        SIGLAS.put("Valor (compra)",  "Valor (compra)\nPosição atual em USD à cotação de compra corrente.\n= Saldo USD × cotação de compra");
+        SIGLAS.put("Valor (venda)",   "Valor (venda)\nPosição atual em USD à cotação de venda corrente.\n= Saldo USD × cotação de venda");
+        SIGLAS.put("Custo Total BRL", "Custo Total BRL\nCapital líquido investido em reais, usando a cotação de cada movimentação.\n= Σ (depósito × cotação) − Σ (saque × cotação)");
+        SIGLAS.put("Lucro Cambial",   "Lucro Cambial\nGanho ou perda não realizado por variação cambial.\n= Valor (venda) − Custo Total BRL");
+        SIGLAS.put("Rentabilidade %", "Rentabilidade %\nRetorno percentual sobre o capital investido.\n= (Lucro Cambial / |Custo Total BRL|) × 100");
         // ── Gastos ───────────────────────────────────────────────────────
         SIGLAS.put("GAT",   "GAT — Gastos Alimentares\n= Σ gastos da categoria Alimentar no período");
         SIGLAS.put("GDT",   "GDT — Gastos Diversos\n= Σ gastos da categoria Diversos no período");

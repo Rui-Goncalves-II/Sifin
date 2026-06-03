@@ -40,8 +40,12 @@ public class DolarListPanel extends BorderPane {
         title.getStyleClass().add("page-title");
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        double cotacao = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
-        Label cotLabel = new Label("Cotação: " + (cotacao > 0 ? "R$ " + FormatUtil.numero(cotacao, 4) : "—"));
+        double cotCompra = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
+        double cotVenda  = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorVenda).orElse(0.0);
+        String cotText = cotCompra > 0
+                ? "Compra: R$ " + FormatUtil.numero(cotCompra, 4) + "  |  Venda: R$ " + FormatUtil.numero(cotVenda, 4)
+                : "—";
+        Label cotLabel = new Label(cotText);
         cotLabel.getStyleClass().add("usd-badge");
 
         Button btnNovo = new Button("+ Novo");
@@ -65,13 +69,21 @@ public class DolarListPanel extends BorderPane {
         });
         colUsd.setPrefWidth(120);
 
-        TableColumn<Investimento, String> colBrl = new TableColumn<>("Valor em BRL");
+        TableColumn<Investimento, String> colBrl = new TableColumn<>("BRL (compra)");
         colBrl.setCellValueFactory(c -> {
             double usd = consolSvc.calcularSaldoUsd(c.getValue().getId());
-            double cot = cotacaoSvc.getCotacaoAtual().map(CotacaoDolar::getValorCompra).orElse(0.0);
-            return new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(usd * cot));
+            return new javafx.beans.property.SimpleStringProperty(
+                    cotCompra > 0 ? FormatUtil.brl(usd * cotCompra) : "—");
         });
-        colBrl.setPrefWidth(140);
+        colBrl.setPrefWidth(130);
+
+        TableColumn<Investimento, String> colBrlVenda = new TableColumn<>("BRL (venda)");
+        colBrlVenda.setCellValueFactory(c -> {
+            double usd = consolSvc.calcularSaldoUsd(c.getValue().getId());
+            return new javafx.beans.property.SimpleStringProperty(
+                    cotVenda > 0 ? FormatUtil.brl(usd * cotVenda) : "—");
+        });
+        colBrlVenda.setPrefWidth(130);
 
         TableColumn<Investimento, Void> colAcoes = new TableColumn<>("Ações");
         colAcoes.setMinWidth(80);
@@ -97,7 +109,7 @@ public class DolarListPanel extends BorderPane {
             }
         });
 
-        table.getColumns().addAll(colNome, colUsd, colBrl, colAcoes);
+        table.getColumns().addAll(colNome, colUsd, colBrl, colBrlVenda, colAcoes);
         table.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2 && table.getSelectionModel().getSelectedItem() != null) {
                 Investimento inv = table.getSelectionModel().getSelectedItem();
