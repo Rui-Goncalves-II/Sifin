@@ -115,6 +115,19 @@ public class GastoRepository {
         return list;
     }
 
+    public List<Gasto> findByTipoMesAno(TipoGasto tipo, int mes, int ano) {
+        String sql = "SELECT * FROM gastos WHERE tipo=? AND periodo_mes=? AND periodo_ano=? ORDER BY valor DESC, id";
+        List<Gasto> list = new ArrayList<>();
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, tipo.name());
+            ps.setInt(2, mes);
+            ps.setInt(3, ano);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) list.add(map(rs));
+        } catch (SQLException e) { throw new RuntimeException(e); }
+        return list;
+    }
+
     public List<Gasto> findMensalidades() {
         return findByTipo(TipoGasto.MENSALIDADE);
     }

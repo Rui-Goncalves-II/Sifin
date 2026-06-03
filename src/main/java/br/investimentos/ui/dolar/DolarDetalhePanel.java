@@ -19,6 +19,7 @@ import javafx.scene.layout.*;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Consumer;
+import javafx.util.StringConverter;
 
 public class DolarDetalhePanel extends BorderPane {
 
@@ -49,25 +50,23 @@ public class DolarDetalhePanel extends BorderPane {
         return new ArrayList<>(anos);
     }
 
-    private HBox buildYearBar() {
-        HBox bar = new HBox(6);
-        bar.setAlignment(Pos.CENTER_LEFT);
-
-        for (int ano : anosComDados()) {
-            Button btn = new Button(String.valueOf(ano));
-            btn.getStyleClass().add("year-btn");
-            if (ano == anoSelecionado) btn.getStyleClass().add("active");
-            btn.setOnAction(e -> { anoSelecionado = ano; construir(); });
-            bar.getChildren().add(btn);
-        }
-
-        Button todos = new Button("Total");
-        todos.getStyleClass().add("year-btn");
-        if (anoSelecionado == ANO_TODOS) todos.getStyleClass().add("active");
-        todos.setOnAction(e -> { anoSelecionado = ANO_TODOS; construir(); });
-        bar.getChildren().add(todos);
-
-        return bar;
+    private ComboBox<Integer> buildYearCombo() {
+        ComboBox<Integer> combo = new ComboBox<>();
+        combo.setPrefWidth(130);
+        combo.setConverter(new StringConverter<>() {
+            @Override public String toString(Integer v) {
+                if (v == null) return "";
+                return v == ANO_TODOS ? "Total" : String.valueOf(v);
+            }
+            @Override public Integer fromString(String s) { return null; }
+        });
+        combo.getItems().addAll(anosComDados());
+        combo.getItems().add(ANO_TODOS);
+        combo.setValue(anoSelecionado);
+        combo.setOnAction(e -> {
+            if (combo.getValue() != null) { anoSelecionado = combo.getValue(); construir(); }
+        });
+        return combo;
     }
 
     private void construir() {
@@ -83,7 +82,7 @@ public class DolarDetalhePanel extends BorderPane {
         Button btnMov = new Button("+ Movimentação");
         btnMov.getStyleClass().add("btn-primary");
         btnMov.setOnAction(e -> { new DolarMovFormDialog(inv, new Movimentacao(), movRepo).showAndWait(); construir(); });
-        header.getChildren().addAll(btnVoltar, title, spacer, buildYearBar(), btnMov);
+        header.getChildren().addAll(btnVoltar, title, spacer, buildYearCombo(), btnMov);
         setTop(header);
 
         ScrollPane scroll = new ScrollPane(buildContent());
@@ -128,12 +127,12 @@ public class DolarDetalhePanel extends BorderPane {
                     .mapToDouble(m -> m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor())
                     .sum();
 
-            grid.add(metricCard("Saldo Total (USD)", "$ " + FormatUtil.numero(totalUsd, 4), "neutral"), 0, 0);
-            grid.add(metricCard("Aportado " + anoSelecionado + " (USD)", "$ " + FormatUtil.numero(aportadoAno, 4), "neutral"), 1, 0);
+            grid.add(metricCard("Saldo Total (USD)", "$ " + FormatUtil.numero(totalUsd, 2), "neutral"), 0, 0);
+            grid.add(metricCard("Aportado " + anoSelecionado + " (USD)", "$ " + FormatUtil.numero(aportadoAno, 2), "neutral"), 1, 0);
             grid.add(metricCard("CMC", cmcStr, "neutral"), 2, 0);
             grid.add(metricCard("Valor BRL (compra)", FormatUtil.brl(brlCompra), "neutral"), 3, 0);
         } else {
-            grid.add(metricCard("Saldo Total (USD)", "$ " + FormatUtil.numero(totalUsd, 4), "neutral"), 0, 0);
+            grid.add(metricCard("Saldo Total (USD)", "$ " + FormatUtil.numero(totalUsd, 2), "neutral"), 0, 0);
             grid.add(metricCard("CMC", cmcStr, "neutral"), 1, 0);
             grid.add(metricCard("Valor BRL (compra)", FormatUtil.brl(brlCompra), "neutral"), 2, 0);
             grid.add(metricCard("Valor BRL (venda)", FormatUtil.brl(brlVenda), "neutral"), 3, 0);
@@ -162,7 +161,7 @@ public class DolarDetalhePanel extends BorderPane {
 
         TableColumn<Movimentacao, String> cValor = new TableColumn<>("Valor (USD)");
         cValor.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                "$ " + FormatUtil.numero(c.getValue().getValor(), 4)));
+                "$ " + FormatUtil.numero(c.getValue().getValor(), 2)));
         cValor.setPrefWidth(120);
         cValor.setCellFactory(col -> new TableCell<>() {
             @Override

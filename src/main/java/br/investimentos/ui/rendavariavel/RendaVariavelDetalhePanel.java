@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import javafx.util.StringConverter;
 
 public class RendaVariavelDetalhePanel extends BorderPane {
 
@@ -57,25 +58,23 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         return new ArrayList<>(anos);
     }
 
-    private HBox buildYearBar() {
-        HBox bar = new HBox(6);
-        bar.setAlignment(Pos.CENTER_LEFT);
-
-        for (int ano : anosComDados()) {
-            Button btn = new Button(String.valueOf(ano));
-            btn.getStyleClass().add("year-btn");
-            if (ano == anoSelecionado) btn.getStyleClass().add("active");
-            btn.setOnAction(e -> { anoSelecionado = ano; construir(); });
-            bar.getChildren().add(btn);
-        }
-
-        Button todos = new Button("Total");
-        todos.getStyleClass().add("year-btn");
-        if (anoSelecionado == ANO_TODOS) todos.getStyleClass().add("active");
-        todos.setOnAction(e -> { anoSelecionado = ANO_TODOS; construir(); });
-        bar.getChildren().add(todos);
-
-        return bar;
+    private ComboBox<Integer> buildYearCombo() {
+        ComboBox<Integer> combo = new ComboBox<>();
+        combo.setPrefWidth(130);
+        combo.setConverter(new StringConverter<>() {
+            @Override public String toString(Integer v) {
+                if (v == null) return "";
+                return v == ANO_TODOS ? "Total" : String.valueOf(v);
+            }
+            @Override public Integer fromString(String s) { return null; }
+        });
+        combo.getItems().addAll(anosComDados());
+        combo.getItems().add(ANO_TODOS);
+        combo.setValue(anoSelecionado);
+        combo.setOnAction(e -> {
+            if (combo.getValue() != null) { anoSelecionado = combo.getValue(); construir(); }
+        });
+        return combo;
     }
 
     private void construir() {
@@ -94,7 +93,7 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         Button btnOp = new Button("+ Operação");
         btnOp.getStyleClass().add("btn-primary");
         btnOp.setOnAction(e -> { new AporteRvFormDialog(inv, new AporteRv(), aporteRepo).showAndWait(); construir(); });
-        header.getChildren().addAll(btnVoltar, title, spacer, buildYearBar(), btnVac, btnOp);
+        header.getChildren().addAll(btnVoltar, title, spacer, buildYearCombo(), btnVac, btnOp);
         setTop(header);
 
         ScrollPane scroll = new ScrollPane(buildContent());

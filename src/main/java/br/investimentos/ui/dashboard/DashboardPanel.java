@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import javafx.util.StringConverter;
 
 public class DashboardPanel extends BorderPane {
 
@@ -47,7 +48,7 @@ public class DashboardPanel extends BorderPane {
     private final Consumer<Node> navigate;
 
     private Label usdLabel;
-    private HBox yearBar;
+    private ComboBox<Integer> yearCombo;
     private VBox alertBox;
     private VBox contentBox;
     private int anoSelecionado;
@@ -83,11 +84,21 @@ public class DashboardPanel extends BorderPane {
         usdLabel = new Label("💰 USD: carregando...");
         usdLabel.getStyleClass().add("usd-badge");
 
-        yearBar = new HBox(6);
-        yearBar.setAlignment(Pos.CENTER_LEFT);
-        buildYearBar();
+        yearCombo = new ComboBox<>();
+        yearCombo.setPrefWidth(160);
+        yearCombo.setConverter(new StringConverter<>() {
+            @Override public String toString(Integer v) {
+                if (v == null) return "";
+                return v == ConsolidacaoService.ANO_TODOS ? "Todos os anos" : String.valueOf(v);
+            }
+            @Override public Integer fromString(String s) { return null; }
+        });
+        yearCombo.setOnAction(e -> {
+            if (yearCombo.getValue() != null) { anoSelecionado = yearCombo.getValue(); refresh(); }
+        });
+        populateYearCombo();
 
-        header.getChildren().addAll(title, spacer, yearBar, usdLabel);
+        header.getChildren().addAll(title, spacer, yearCombo, usdLabel);
         setTop(header);
 
         alertBox = new VBox(4);
@@ -104,25 +115,13 @@ public class DashboardPanel extends BorderPane {
         atualizarUsd();
     }
 
-    private void buildYearBar() {
-        yearBar.getChildren().clear();
+    private void populateYearCombo() {
         List<Integer> anos = consolSvc.anosComDados();
         int atual = LocalDate.now().getYear();
         if (!anos.contains(atual)) anos.add(0, atual);
-
-        for (int ano : anos) {
-            Button btn = new Button(String.valueOf(ano));
-            btn.getStyleClass().add("year-btn");
-            if (ano == anoSelecionado) btn.getStyleClass().add("active");
-            btn.setOnAction(e -> { anoSelecionado = ano; buildYearBar(); refresh(); });
-            yearBar.getChildren().add(btn);
-        }
-
-        Button todos = new Button("Todos os anos");
-        todos.getStyleClass().add("year-btn");
-        if (anoSelecionado == ConsolidacaoService.ANO_TODOS) todos.getStyleClass().add("active");
-        todos.setOnAction(e -> { anoSelecionado = ConsolidacaoService.ANO_TODOS; buildYearBar(); refresh(); });
-        yearBar.getChildren().add(todos);
+        yearCombo.getItems().setAll(anos);
+        yearCombo.getItems().add(ConsolidacaoService.ANO_TODOS);
+        yearCombo.setValue(anoSelecionado);
     }
 
     /** Chamado pelo callback de cotação (já na thread JavaFX via Platform.runLater). */

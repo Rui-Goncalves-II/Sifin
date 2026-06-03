@@ -22,8 +22,8 @@ public class GastosPanel extends BorderPane {
     private void construir() {
         dashPanel = new GastosDashboardPanel(svc);
 
-        GastosListPanel aliPanel = new GastosListPanel(repo, TipoGasto.ALIMENTAR, this::onDadosAlterados);
-        GastosListPanel divPanel = new GastosListPanel(repo, TipoGasto.DIVERSO,   this::onDadosAlterados);
+        GastosListPanel aliPanel = new GastosListPanel(repo, svc, TipoGasto.ALIMENTAR, this::onDadosAlterados);
+        GastosListPanel divPanel = new GastosListPanel(repo, svc, TipoGasto.DIVERSO,   this::onDadosAlterados);
         MensalidadesListPanel menPanel = new MensalidadesListPanel(repo, this::onDadosAlterados);
 
         Tab tabDash = new Tab("📊 Dashboard", dashPanel);

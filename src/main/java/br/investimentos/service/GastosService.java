@@ -16,6 +16,9 @@ public class GastosService {
         public double total() { return alimentar + diverso + mensalidade; }
     }
 
+    public record ResumoSegmento(double total, int count, double maiorValor, String maiorDesc, double media) {}
+
+
     private final GastoRepository repo;
 
     public GastosService(GastoRepository repo) {
@@ -137,5 +140,20 @@ public class GastosService {
 
     public List<Integer> anosComDados() {
         return repo.anosComDados();
+    }
+
+    public List<Gasto> listarGastos(TipoGasto tipo, int mes, int ano) {
+        if (mes == ANO_TODOS) return repo.findByTipoEAno(tipo, ano);
+        return repo.findByTipoMesAno(tipo, mes, ano);
+    }
+
+    public ResumoSegmento calcularResumoSegmento(TipoGasto tipo, int mes, int ano) {
+        List<Gasto> lista = listarGastos(tipo, mes, ano);
+        if (lista.isEmpty()) return new ResumoSegmento(0, 0, 0, "—", 0);
+        double total = lista.stream().mapToDouble(Gasto::getValor).sum();
+        int count = lista.size();
+        Gasto maior = lista.stream().max(java.util.Comparator.comparingDouble(Gasto::getValor)).orElseThrow();
+        double media = total / count;
+        return new ResumoSegmento(total, count, maior.getValor(), maior.getDescricao(), media);
     }
 }

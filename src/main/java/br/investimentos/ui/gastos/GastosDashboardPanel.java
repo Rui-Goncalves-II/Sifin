@@ -16,6 +16,7 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import javax.swing.*;
 import java.time.LocalDate;
 import java.util.List;
+import javafx.util.StringConverter;
 
 public class GastosDashboardPanel extends BorderPane {
 
@@ -26,7 +27,7 @@ public class GastosDashboardPanel extends BorderPane {
 
     private final GastosService svc;
 
-    private HBox yearBar;
+    private ComboBox<Integer> yearCombo;
     private VBox contentBox;
     private int anoSelecionado;
 
@@ -47,11 +48,21 @@ public class GastosDashboardPanel extends BorderPane {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        yearBar = new HBox(6);
-        yearBar.setAlignment(Pos.CENTER_LEFT);
-        buildYearBar();
+        yearCombo = new ComboBox<>();
+        yearCombo.setPrefWidth(160);
+        yearCombo.setConverter(new StringConverter<>() {
+            @Override public String toString(Integer v) {
+                if (v == null) return "";
+                return v == GastosService.ANO_TODOS ? "Todos os anos" : String.valueOf(v);
+            }
+            @Override public Integer fromString(String s) { return null; }
+        });
+        yearCombo.setOnAction(e -> {
+            if (yearCombo.getValue() != null) { anoSelecionado = yearCombo.getValue(); refresh(); }
+        });
+        populateYearCombo();
 
-        header.getChildren().addAll(title, spacer, yearBar);
+        header.getChildren().addAll(title, spacer, yearCombo);
         setTop(header);
 
         contentBox = new VBox(16);
@@ -65,25 +76,13 @@ public class GastosDashboardPanel extends BorderPane {
         refresh();
     }
 
-    private void buildYearBar() {
-        yearBar.getChildren().clear();
+    private void populateYearCombo() {
         List<Integer> anos = svc.anosComDados();
         int atual = LocalDate.now().getYear();
         if (!anos.contains(atual)) anos.add(0, atual);
-
-        for (int ano : anos) {
-            Button btn = new Button(String.valueOf(ano));
-            btn.getStyleClass().add("year-btn");
-            if (ano == anoSelecionado) btn.getStyleClass().add("active");
-            btn.setOnAction(e -> { anoSelecionado = ano; buildYearBar(); refresh(); });
-            yearBar.getChildren().add(btn);
-        }
-
-        Button todos = new Button("Todos os anos");
-        todos.getStyleClass().add("year-btn");
-        if (anoSelecionado == GastosService.ANO_TODOS) todos.getStyleClass().add("active");
-        todos.setOnAction(e -> { anoSelecionado = GastosService.ANO_TODOS; buildYearBar(); refresh(); });
-        yearBar.getChildren().add(todos);
+        yearCombo.getItems().setAll(anos);
+        yearCombo.getItems().add(GastosService.ANO_TODOS);
+        yearCombo.setValue(anoSelecionado);
     }
 
     public void refresh() {
