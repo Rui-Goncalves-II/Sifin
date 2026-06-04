@@ -6,6 +6,7 @@ import br.investimentos.repository.GastoRepository;
 import br.investimentos.ui.util.InputUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -67,6 +68,31 @@ public class GastoFormDialog extends Stage {
         InputUtil.applyUpperCaseFilter(fDescricao);
         if (existente != null) fDescricao.setText(existente.getDescricao());
         else fDescricao.setPromptText("Ex: SUPERMERCADO EXTRA");
+
+        List<String> descricoesCadastradas = repo.findByTipo(tipo).stream()
+                .map(Gasto::getDescricao)
+                .distinct()
+                .sorted()
+                .toList();
+        ContextMenu autocompleteMenu = new ContextMenu();
+        fDescricao.textProperty().addListener((obs, oldVal, newVal) -> {
+            autocompleteMenu.hide();
+            if (newVal == null || newVal.isBlank()) return;
+            String upper = newVal.toUpperCase();
+            List<MenuItem> itens = descricoesCadastradas.stream()
+                    .filter(d -> d.contains(upper))
+                    .limit(8)
+                    .map(d -> {
+                        MenuItem mi = new MenuItem(d);
+                        mi.setOnAction(e -> fDescricao.setText(d));
+                        return mi;
+                    })
+                    .toList();
+            if (!itens.isEmpty()) {
+                autocompleteMenu.getItems().setAll(itens);
+                autocompleteMenu.show(fDescricao, Side.BOTTOM, 0, 0);
+            }
+        });
 
         fMes = new TextField();
         InputUtil.applyIntegerFilter(fMes);

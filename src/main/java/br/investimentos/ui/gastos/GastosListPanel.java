@@ -24,7 +24,9 @@ import org.jfree.data.category.DefaultCategoryDataset;
 
 import javax.swing.*;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class GastosListPanel extends BorderPane {
@@ -187,16 +189,17 @@ public class GastosListPanel extends BorderPane {
         java.awt.Font  fontBold= new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
 
         DefaultCategoryDataset ds = new DefaultCategoryDataset();
-        List<Gasto> top = gastos.stream()
-                .sorted((a, b) -> Double.compare(b.getValor(), a.getValor()))
-                .limit(10)
-                .toList();
-        for (Gasto g : top) {
+        Map<String, Double> totaisPorDesc = new LinkedHashMap<>();
+        for (Gasto g : gastos) {
             String desc = g.getDescricao().length() > 25
                     ? g.getDescricao().substring(0, 24) + "…"
                     : g.getDescricao();
-            ds.addValue(g.getValor(), "Valor", desc);
+            totaisPorDesc.merge(desc, g.getValor(), Double::sum);
         }
+        totaisPorDesc.entrySet().stream()
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .limit(10)
+                .forEach(e -> ds.addValue(e.getValue(), "Valor", e.getKey()));
 
         CategoryAxis xAxis = new CategoryAxis(null);
         xAxis.setTickLabelPaint(textMut);
@@ -246,7 +249,7 @@ public class GastosListPanel extends BorderPane {
         chart.getTitle().setPaint(textMut);
         chart.getTitle().setFont(fontBold);
 
-        return wrapChart(chart, bgCard, Math.max(200, top.size() * 36 + 80));
+        return wrapChart(chart, bgCard, Math.max(200, Math.min(10, totaisPorDesc.size()) * 36 + 80));
     }
 
     private VBox buildMonthlyBarChart(List<Gasto> gastos) {
