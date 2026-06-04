@@ -64,7 +64,8 @@ public final class GlossarioTooltip {
         SIGLAS.put("LEA %", "LEA % — Rentabilidade Acumulada com Dividendos\n= (LEA / VTP) × 100");
         SIGLAS.put("D",     "D — Dividendos\n= Σ valores de todos os dividendos recebidos");
         // ── Dólar ────────────────────────────────────────────────────────
-        SIGLAS.put("CMC",             "CMC — Cotação Média de Compra\n= Σ (USD × cotação) / Σ USD\nMédia ponderada dos depósitos com cotação registada.");
+        SIGLAS.put("CMC",           "CMC — Cotação Média de Compra\n= Σ (USD × cotação) / Σ USD\nMédia ponderada dos depósitos com cotação registada.");
+        SIGLAS.put("Cotação Atual", "Cotação Atual USD/BRL (compra)\nTaxa a que o mercado vende USD.\nFonte: AwesomeAPI, cache de 15 min.");
         SIGLAS.put("Valor de Compra", "Valor de Compra\nCapital líquido investido em reais.\n= Σ (depósito × cotação histórica) − Σ (saque × cotação histórica)\nMov. sem cotação usam a cotação actual como estimativa.");
         SIGLAS.put("Valor de Venda",  "Valor de Venda\nValor actual da posição USD em reais.\n= Saldo USD × cotação de venda actual");
         SIGLAS.put("Rendimento",      "Rendimento\nLucro ou prejuízo cambial não realizado.\n= Valor de Venda − Valor de Compra");

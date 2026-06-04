@@ -155,6 +155,8 @@ public class DolarDetalhePanel extends BorderPane {
         grid.add(metricCard("Rentabilidade %", rentStr, rentStyle), 3, 0);
 
         // Linha 1 — referência
+        String cotCompraStr = cotCompra > 0 ? "R$ " + FormatUtil.numero(cotCompra, 4) : "—";
+
         grid.add(metricCard("Saldo Total (USD)", usdStr, "neutral"), 0, 1);
         if (anoSelecionado != ANO_TODOS) {
             double aportadoAno = movRepo.findByInvestimentoEAno(inv.getId(), anoSelecionado).stream()
@@ -162,8 +164,10 @@ public class DolarDetalhePanel extends BorderPane {
                     .sum();
             grid.add(metricCard("Aportado " + anoSelecionado + " (USD)", "$ " + FormatUtil.numero(aportadoAno, 2), "neutral"), 1, 1);
             grid.add(metricCard("CMC", cmcStr, "neutral"), 2, 1);
+            grid.add(metricCard("Cotação Atual", cotCompraStr, "neutral"), 3, 1);
         } else {
             grid.add(metricCard("CMC", cmcStr, "neutral"), 1, 1);
+            grid.add(metricCard("Cotação Atual", cotCompraStr, "neutral"), 2, 1);
         }
 
         // Movimentações filtradas
