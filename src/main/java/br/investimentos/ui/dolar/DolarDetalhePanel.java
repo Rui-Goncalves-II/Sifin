@@ -116,28 +116,30 @@ public class DolarDetalhePanel extends BorderPane {
         double cmc = totalUsdComprado > 0 ? totalBrlPago / totalUsdComprado : 0;
         String cmcStr = cmc > 0 ? "R$ " + FormatUtil.numero(cmc, 4) : "—";
 
-        // Custo Total BRL = Σ(deposito × cotacao) - Σ(saque × cotacao), com fallback cotCompra
+        // Valor de Compra BRL = Σ(DEP×cot) − Σ(SAQ×cot); fallback: DEP→cotCompra, SAQ→cotVenda
         double custoTotalBrl = 0;
         for (Movimentacao m : todasMovs) {
-            double cot = m.getCotacaoDolar() != null ? m.getCotacaoDolar() : cotCompra;
+            double cot = m.getCotacaoDolar() != null ? m.getCotacaoDolar()
+                    : (m.getTipoMov() == TipoMovimentacao.DEPOSITO ? cotCompra
+                       : (cotVenda > 0 ? cotVenda : cotCompra));
             if (m.getTipoMov() == TipoMovimentacao.DEPOSITO) custoTotalBrl += m.getValor() * cot;
             else                                              custoTotalBrl -= m.getValor() * cot;
         }
-        double lucroCambial = (cotVenda > 0 ? brlVenda : brlCompra) - custoTotalBrl;
+        double rendimento = (cotVenda > 0 ? brlVenda : brlCompra) - custoTotalBrl;
         double rentValue = 0;
         String rentStr;
         if (custoTotalBrl == 0) {
             rentStr = "—";
         } else {
-            rentValue = (lucroCambial / Math.abs(custoTotalBrl)) * 100;
+            rentValue = (rendimento / Math.abs(custoTotalBrl)) * 100;
             rentStr = FormatUtil.pct(rentValue);
         }
-        String lucroStyle = lucroCambial >= 0 ? "positive" : "negative";
-        String rentStyle  = rentStr.equals("—") ? "neutral" : (rentValue >= 0 ? "positive" : "negative");
+        String rendStyle = rendimento >= 0 ? "positive" : "negative";
+        String rentStyle = rentStr.equals("—") ? "neutral" : (rentValue >= 0 ? "positive" : "negative");
 
-        String usdStr = "$ " + FormatUtil.numero(totalUsd, 2);
-        String brlC   = cotCompra > 0 ? FormatUtil.brl(brlCompra) : "—";
-        String brlV   = cotVenda  > 0 ? FormatUtil.brl(brlVenda)  : "—";
+        String usdStr    = "$ " + FormatUtil.numero(totalUsd, 2);
+        String compraBrl = custoTotalBrl != 0 ? FormatUtil.brl(custoTotalBrl) : "—";
+        String vendaBrl  = cotVenda > 0 ? FormatUtil.brl(brlVenda) : "—";
 
         GridPane grid = new GridPane();
         grid.setHgap(12); grid.setVgap(12);
@@ -146,30 +148,22 @@ public class DolarDetalhePanel extends BorderPane {
             grid.getColumnConstraints().add(cc);
         }
 
+        // Linha 0 — KPIs principais (iguais em ambos os modos)
+        grid.add(metricCardDual("Valor de Compra", usdStr, compraBrl, "neutral"), 0, 0);
+        grid.add(metricCardDual("Valor de Venda",  usdStr, vendaBrl,  "neutral"), 1, 0);
+        grid.add(metricCard("Rendimento",      FormatUtil.brl(rendimento), rendStyle), 2, 0);
+        grid.add(metricCard("Rentabilidade %", rentStr, rentStyle), 3, 0);
+
+        // Linha 1 — referência
+        grid.add(metricCard("Saldo Total (USD)", usdStr, "neutral"), 0, 1);
         if (anoSelecionado != ANO_TODOS) {
             double aportadoAno = movRepo.findByInvestimentoEAno(inv.getId(), anoSelecionado).stream()
                     .mapToDouble(m -> m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor())
                     .sum();
-            // Linha 0
-            grid.add(metricCard("Saldo Total (USD)", usdStr, "neutral"), 0, 0);
-            grid.add(metricCard("Aportado " + anoSelecionado + " (USD)", "$ " + FormatUtil.numero(aportadoAno, 2), "neutral"), 1, 0);
-            grid.add(metricCardDual("Valor (compra)", usdStr, brlC, "neutral"), 2, 0);
-            grid.add(metricCardDual("Valor (venda)",  usdStr, brlV, "neutral"), 3, 0);
-            // Linha 1
-            grid.add(metricCard("CMC", cmcStr, "neutral"), 0, 1);
-            grid.add(metricCard("Custo Total BRL", FormatUtil.brl(custoTotalBrl), "neutral"), 1, 1);
-            grid.add(metricCard("Lucro Cambial", FormatUtil.brl(lucroCambial), lucroStyle), 2, 1);
-            grid.add(metricCard("Rentabilidade %", rentStr, rentStyle), 3, 1);
+            grid.add(metricCard("Aportado " + anoSelecionado + " (USD)", "$ " + FormatUtil.numero(aportadoAno, 2), "neutral"), 1, 1);
+            grid.add(metricCard("CMC", cmcStr, "neutral"), 2, 1);
         } else {
-            // Linha 0
-            grid.add(metricCard("Saldo Total (USD)", usdStr, "neutral"), 0, 0);
-            grid.add(metricCard("CMC", cmcStr, "neutral"), 1, 0);
-            grid.add(metricCardDual("Valor (compra)", usdStr, brlC, "neutral"), 2, 0);
-            grid.add(metricCardDual("Valor (venda)",  usdStr, brlV, "neutral"), 3, 0);
-            // Linha 1
-            grid.add(metricCard("Custo Total BRL", FormatUtil.brl(custoTotalBrl), "neutral"), 0, 1);
-            grid.add(metricCard("Lucro Cambial", FormatUtil.brl(lucroCambial), lucroStyle), 1, 1);
-            grid.add(metricCard("Rentabilidade %", rentStr, rentStyle), 2, 1);
+            grid.add(metricCard("CMC", cmcStr, "neutral"), 1, 1);
         }
 
         // Movimentações filtradas
