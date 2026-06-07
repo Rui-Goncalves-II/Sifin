@@ -6,6 +6,7 @@ import br.investimentos.model.VacMensal;
 import br.investimentos.model.enums.TipoOperacaoRv;
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
+import br.investimentos.service.BrapiService;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.GlossarioTooltip;
 import javafx.geometry.Insets;
@@ -20,8 +21,10 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.category.DefaultCategoryDataset;
 
+import javafx.application.Platform;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javafx.util.StringConverter;
@@ -36,6 +39,7 @@ public class RendaVariavelDetalhePanel extends BorderPane {
     private final VacMensalRepository vacRepo;
     private final RendaVariavelService rvSvc;
     private final CotacaoService cotacaoSvc;
+    private final BrapiService brapiSvc;
     private final Consumer<Node> navigate;
 
     private int anoSelecionado;
@@ -43,9 +47,10 @@ public class RendaVariavelDetalhePanel extends BorderPane {
     public RendaVariavelDetalhePanel(Investimento inv, InvestimentoRepository invRepo,
                                       AporteRvRepository aporteRepo, VacMensalRepository vacRepo,
                                       RendaVariavelService rvSvc, CotacaoService cotacaoSvc,
-                                      Consumer<Node> navigate) {
+                                      BrapiService brapiSvc, Consumer<Node> navigate) {
         this.inv = inv; this.invRepo = invRepo; this.aporteRepo = aporteRepo;
-        this.vacRepo = vacRepo; this.rvSvc = rvSvc; this.cotacaoSvc = cotacaoSvc; this.navigate = navigate;
+        this.vacRepo = vacRepo; this.rvSvc = rvSvc; this.cotacaoSvc = cotacaoSvc;
+        this.brapiSvc = brapiSvc; this.navigate = navigate;
         anoSelecionado = LocalDate.now().getYear();
         construir();
     }
@@ -77,23 +82,77 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         return combo;
     }
 
+    private void buscarCotacaoBrapi(Button btnBrapi) {
+        String notas = inv.getNotas();
+        if (notas == null || notas.isBlank()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING,
+                    "Preencha o campo 'Notas / Ticker' do ativo com o código do papel (ex: HGLG11).",
+                    ButtonType.OK);
+            alert.setTitle("Ticker não encontrado");
+            alert.showAndWait();
+            return;
+        }
+        String ticker = notas.strip().split("\\s+")[0].toUpperCase();
+        btnBrapi.setDisable(true);
+        btnBrapi.setText("Buscando...");
+
+        Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r); t.setDaemon(true); return t; })
+                .submit(() -> {
+                    var precoOpt = brapiSvc.buscarPreco(ticker);
+                    Platform.runLater(() -> {
+                        btnBrapi.setDisable(false);
+                        btnBrapi.setText("Buscar via BRAPI");
+                        if (precoOpt.isEmpty()) {
+                            Alert err = new Alert(Alert.AlertType.ERROR,
+                                    "Não foi possível obter a cotação para " + ticker + ".\n" +
+                                    "Verifique o token nas Configurações e o código do ticker.",
+                                    ButtonType.OK);
+                            err.setTitle("Erro ao buscar cotação");
+                            err.showAndWait();
+                            return;
+                        }
+                        double preco = precoOpt.get();
+                        LocalDate hoje = LocalDate.now();
+                        String mesAnoStr = String.format("%02d/%d", hoje.getMonthValue(), hoje.getYear());
+                        Alert conf = new Alert(Alert.AlertType.CONFIRMATION,
+                                ticker + ": R$ " + String.format("%.2f", preco).replace('.', ',') +
+                                "\nSalvar como VAC de " + mesAnoStr + "?",
+                                ButtonType.YES, ButtonType.NO);
+                        conf.setTitle("Cotação encontrada");
+                        conf.showAndWait().filter(r -> r == ButtonType.YES).ifPresent(r -> {
+                            VacMensal vac = new VacMensal();
+                            vac.setInvestimentoId(inv.getId());
+                            vac.setPeriodoMes(hoje.getMonthValue());
+                            vac.setPeriodoAno(hoje.getYear());
+                            vac.setVac(preco);
+                            vac.setFonte("BRAPI");
+                            vacRepo.salvar(vac);
+                            construir();
+                        });
+                    });
+                });
+    }
+
     private void construir() {
         HBox header = new HBox(12);
         header.getStyleClass().add("dash-header");
         header.setAlignment(Pos.CENTER_LEFT);
         Button btnVoltar = new Button("← Voltar");
         btnVoltar.getStyleClass().add("btn-secondary");
-        btnVoltar.setOnAction(e -> navigate.accept(new RendaVariavelListPanel(invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, navigate)));
+        btnVoltar.setOnAction(e -> navigate.accept(new RendaVariavelListPanel(invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, brapiSvc, navigate)));
         Label title = new Label("💹 " + inv.getNome());
         title.getStyleClass().add("page-title");
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
+        Button btnBrapi = new Button("Buscar via BRAPI");
+        btnBrapi.getStyleClass().add("btn-secondary");
+        btnBrapi.setOnAction(e -> buscarCotacaoBrapi(btnBrapi));
         Button btnVac = new Button("Atualizar VAC");
         btnVac.getStyleClass().add("btn-secondary");
         btnVac.setOnAction(e -> { new VacFormDialog(inv, vacRepo).showAndWait(); construir(); });
         Button btnOp = new Button("+ Operação");
         btnOp.getStyleClass().add("btn-primary");
         btnOp.setOnAction(e -> { new AporteRvFormDialog(inv, new AporteRv(), aporteRepo).showAndWait(); construir(); });
-        header.getChildren().addAll(btnVoltar, title, spacer, buildYearCombo(), btnVac, btnOp);
+        header.getChildren().addAll(btnVoltar, title, spacer, buildYearCombo(), btnBrapi, btnVac, btnOp);
         setTop(header);
 
         ScrollPane scroll = new ScrollPane(buildContent());

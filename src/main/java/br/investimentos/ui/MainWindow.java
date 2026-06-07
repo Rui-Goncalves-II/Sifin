@@ -2,6 +2,8 @@ package br.investimentos.ui;
 
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
+import br.investimentos.service.BrapiService;
+import br.investimentos.service.ConfigService;
 import br.investimentos.ui.component.SideBar;
 import br.investimentos.ui.dashboard.DashboardPanel;
 import br.investimentos.ui.dolar.DolarListPanel;
@@ -52,6 +54,8 @@ public class MainWindow {
     private final ConsolidacaoService consolSvc;
     private final CotacaoService cotacaoSvc;
     private final GastosService gastosSvc;
+    private final ConfigService configSvc;
+    private final BrapiService brapiSvc;
 
     public MainWindow(Stage stage,
                       InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
@@ -62,7 +66,7 @@ public class MainWindow {
                       RendaVariavelService rvSvc, SaldoService saldoSvc,
                       ProjecaoService projecaoSvc, VaiService vaiSvc, AlertaService alertaSvc,
                       ConsolidacaoService consolSvc, CotacaoService cotacaoSvc,
-                      GastosService gastosSvc) {
+                      GastosService gastosSvc, ConfigService configSvc, BrapiService brapiSvc) {
         this.stage = stage;
         this.invRepo = invRepo; this.movRepo = movRepo; this.aporteRepo = aporteRepo;
         this.vtaRepo = vtaRepo; this.vacRepo = vacRepo; this.vaiRepo = vaiRepo;
@@ -70,7 +74,7 @@ public class MainWindow {
         this.taxaSvc = taxaSvc; this.rendSvc = rendSvc; this.rvSvc = rvSvc;
         this.saldoSvc = saldoSvc; this.projecaoSvc = projecaoSvc; this.vaiSvc = vaiSvc;
         this.alertaSvc = alertaSvc; this.consolSvc = consolSvc; this.cotacaoSvc = cotacaoSvc;
-        this.gastosSvc = gastosSvc;
+        this.gastosSvc = gastosSvc; this.configSvc = configSvc; this.brapiSvc = brapiSvc;
 
         contentArea = new StackPane();
         contentArea.getStyleClass().add("content-area");
@@ -101,7 +105,7 @@ public class MainWindow {
     }
 
     private Node makeRendaVariavel() {
-        return new RendaVariavelListPanel(invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, this::loadPanel);
+        return new RendaVariavelListPanel(invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, brapiSvc, this::loadPanel);
     }
 
     private Node makeDolar() {
@@ -118,7 +122,7 @@ public class MainWindow {
     }
 
     private Node makeConfiguracoes() {
-        return new ConfiguracoesPanel(this::loadPanel, this::makeDashboard, rootLayer);
+        return new ConfiguracoesPanel(this::loadPanel, this::makeDashboard, rootLayer, configSvc, brapiSvc);
     }
 
     private ImageView loadSidebarIcon(String resourcePath, int size) {

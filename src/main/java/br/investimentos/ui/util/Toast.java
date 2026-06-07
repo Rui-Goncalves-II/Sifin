@@ -8,7 +8,11 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.util.Duration;
 
+import java.util.WeakHashMap;
+
 public class Toast {
+
+    private static final WeakHashMap<StackPane, VBox> TRAYS = new WeakHashMap<>();
 
     public static void show(StackPane overlay, String titulo, String mensagem) {
         Label titleLbl = new Label(titulo);
@@ -33,9 +37,8 @@ public class Toast {
         card.setMaxWidth(300);
         card.setMinWidth(260);
 
-        StackPane.setAlignment(card, Pos.BOTTOM_RIGHT);
-        StackPane.setMargin(card, new Insets(0, 24, 24, 0));
-        overlay.getChildren().add(card);
+        VBox tray = getTray(overlay);
+        tray.getChildren().add(0, card);
 
         // Entrada: desliza da direita + fade
         card.setOpacity(0);
@@ -56,13 +59,35 @@ public class Toast {
         closeBtn.setOnAction(e -> { seq.stop(); dismiss(overlay, card); });
     }
 
+    private static VBox getTray(StackPane overlay) {
+        return TRAYS.computeIfAbsent(overlay, sp -> {
+            VBox tray = new VBox(8);
+            tray.setAlignment(Pos.BOTTOM_RIGHT);
+            tray.setMaxWidth(320);
+            tray.setPickOnBounds(false);
+            StackPane.setAlignment(tray, Pos.BOTTOM_RIGHT);
+            StackPane.setMargin(tray, new Insets(0, 24, 24, 0));
+            sp.getChildren().add(tray);
+            return tray;
+        });
+    }
+
     private static void dismiss(StackPane overlay, VBox card) {
         FadeTransition fadeOut = new FadeTransition(Duration.millis(220), card);
         fadeOut.setFromValue(card.getOpacity()); fadeOut.setToValue(0);
         TranslateTransition slideOut = new TranslateTransition(Duration.millis(220), card);
         slideOut.setFromX(0); slideOut.setToX(40);
         ParallelTransition exit = new ParallelTransition(fadeOut, slideOut);
-        exit.setOnFinished(e -> overlay.getChildren().remove(card));
+        exit.setOnFinished(e -> {
+            VBox tray = TRAYS.get(overlay);
+            if (tray != null) {
+                tray.getChildren().remove(card);
+                if (tray.getChildren().isEmpty()) {
+                    overlay.getChildren().remove(tray);
+                    TRAYS.remove(overlay);
+                }
+            }
+        });
         exit.play();
     }
 }

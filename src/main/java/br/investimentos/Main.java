@@ -3,6 +3,8 @@ package br.investimentos;
 import br.investimentos.db.DatabaseManager;
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
+import br.investimentos.service.BrapiService;
+import br.investimentos.service.ConfigService;
 import br.investimentos.ui.MainWindow;
 import javafx.application.Application;
 import javafx.stage.Stage;
@@ -32,6 +34,8 @@ public class Main extends Application {
         var consolSvc    = new ConsolidacaoService(invRepo, movRepo, vtaRepo, vaiRepo, aporteRepo, vacRepo, rendSvc, rvSvc);
         var cotacaoSvc   = new CotacaoService(cotaRepo);
         var gastosSvc    = new GastosService(gastoRepo);
+        var configSvc    = new ConfigService();
+        var brapiSvc     = new BrapiService(configSvc);
 
         vaiSvc.virarAno();
 
@@ -39,7 +43,7 @@ public class Main extends Application {
                 primaryStage, invRepo, movRepo, aporteRepo, vtaRepo, vacRepo, vaiRepo,
                 gastoRepo,
                 taxaSvc, rendSvc, rvSvc, saldoSvc, projecaoSvc, vaiSvc, alertaSvc, consolSvc, cotacaoSvc,
-                gastosSvc
+                gastosSvc, configSvc, brapiSvc
         );
         window.show();
     }

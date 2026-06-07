@@ -4,6 +4,7 @@ import br.investimentos.model.Investimento;
 import br.investimentos.model.enums.TipoInvestimento;
 import br.investimentos.repository.*;
 import br.investimentos.service.*;
+import br.investimentos.service.BrapiService;
 import br.investimentos.ui.util.FormatUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -20,6 +21,7 @@ public class RendaVariavelListPanel extends BorderPane {
     private final VacMensalRepository vacRepo;
     private final RendaVariavelService rvSvc;
     private final CotacaoService cotacaoSvc;
+    private final BrapiService brapiSvc;
     private final Consumer<Node> navigate;
 
     private TableView<Investimento> table;
@@ -27,9 +29,9 @@ public class RendaVariavelListPanel extends BorderPane {
 
     public RendaVariavelListPanel(InvestimentoRepository invRepo, AporteRvRepository aporteRepo,
                                    VacMensalRepository vacRepo, RendaVariavelService rvSvc,
-                                   CotacaoService cotacaoSvc, Consumer<Node> navigate) {
+                                   CotacaoService cotacaoSvc, BrapiService brapiSvc, Consumer<Node> navigate) {
         this.invRepo = invRepo; this.aporteRepo = aporteRepo; this.vacRepo = vacRepo;
-        this.rvSvc = rvSvc; this.cotacaoSvc = cotacaoSvc; this.navigate = navigate;
+        this.rvSvc = rvSvc; this.cotacaoSvc = cotacaoSvc; this.brapiSvc = brapiSvc; this.navigate = navigate;
         construir();
     }
 
@@ -111,11 +113,11 @@ public class RendaVariavelListPanel extends BorderPane {
                 btnOp.setStyle("-fx-padding: 4 8; -fx-font-size: 15px;");
                 btnOp.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
                 btnVer.setOnAction(e -> navigate.accept(new RendaVariavelDetalhePanel(
-                        getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, navigate)));
+                        getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, brapiSvc, navigate)));
                 btnOp.setOnAction(e -> {
                     new RendaVariavelFormDialog(getTableView().getItems().get(getIndex()), invRepo).showAndWait();
                     navigate.accept(new RendaVariavelDetalhePanel(
-                            getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, navigate));
+                            getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, brapiSvc, navigate));
                 });
             }
             @Override protected void updateItem(Void v, boolean empty) {
@@ -128,7 +130,7 @@ public class RendaVariavelListPanel extends BorderPane {
         table.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2 && table.getSelectionModel().getSelectedItem() != null) {
                 Investimento inv = table.getSelectionModel().getSelectedItem();
-                navigate.accept(new RendaVariavelDetalhePanel(inv, invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, navigate));
+                navigate.accept(new RendaVariavelDetalhePanel(inv, invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, brapiSvc, navigate));
             }
         });
 
