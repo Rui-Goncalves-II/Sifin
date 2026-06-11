@@ -152,8 +152,13 @@ public class GastosService {
         if (lista.isEmpty()) return new ResumoSegmento(0, 0, 0, "—", 0);
         double total = lista.stream().mapToDouble(Gasto::getValor).sum();
         int count = lista.size();
-        Gasto maior = lista.stream().max(java.util.Comparator.comparingDouble(Gasto::getValor)).orElseThrow();
+        java.util.Map.Entry<String, Double> maiorGrupo = lista.stream()
+                .collect(java.util.stream.Collectors.groupingBy(Gasto::getDescricao,
+                         java.util.stream.Collectors.summingDouble(Gasto::getValor)))
+                .entrySet().stream()
+                .max(java.util.Map.Entry.comparingByValue())
+                .orElseThrow();
         double media = total / count;
-        return new ResumoSegmento(total, count, maior.getValor(), maior.getDescricao(), media);
+        return new ResumoSegmento(total, count, maiorGrupo.getValue(), maiorGrupo.getKey(), media);
     }
 }

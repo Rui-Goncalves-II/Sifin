@@ -15,6 +15,7 @@ import br.investimentos.ui.configuracoes.ConfiguracoesPanel;
 import br.investimentos.ui.transacao.TransacaoPanel;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.service.AtualizacaoService;
+import br.investimentos.service.VacAutoService;
 import br.investimentos.ui.util.AtualizacaoDialog;
 import br.investimentos.ui.util.Toast;
 import java.io.IOException;
@@ -170,6 +171,9 @@ public class MainWindow {
                 AtualizacaoService.getReleaseUrl()
             ));
         });
+
+        new VacAutoService(invRepo, vacRepo, brapiSvc)
+                .atualizarVacsAsync(msg -> Toast.show(rootLayer, "VAC atualizado", msg));
 
         cotacaoSvc.iniciarRefreshAutomatico(cot -> Platform.runLater(() -> {
             if (!contentArea.getChildren().isEmpty() &&
