@@ -330,6 +330,9 @@
 .text-field:focused, .combo-box:focused, .text-area:focused {
     -fx-border-color: #3fb950;
 }
+.text-area .content {
+    -fx-background-color: #1c2230;
+}
 .combo-box .list-cell { -fx-padding: 4 12; -fx-background-color: #1c2230; -fx-text-fill: #e6edf3; }
 .combo-box-popup .list-view { -fx-background-color: #1c2230; -fx-border-color: #2a3441; }
 .combo-box-popup .list-cell:hover { -fx-background-color: #253044; }
