@@ -4,6 +4,7 @@ import br.investimentos.model.Gasto;
 import br.investimentos.model.enums.TipoGasto;
 import br.investimentos.repository.GastoRepository;
 import br.investimentos.ui.util.InputUtil;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -186,6 +187,7 @@ public class GastoFormDialog extends Stage {
             } else {
                 lblValor.setText("Valor (R$)");
             }
+            Platform.runLater(this::sizeToScene);
         });
 
         VBox box = new VBox(8, cbParcelado, parcelasRow);

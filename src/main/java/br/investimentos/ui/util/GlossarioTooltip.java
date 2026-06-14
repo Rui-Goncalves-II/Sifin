@@ -36,7 +36,7 @@ public final class GlossarioTooltip {
         SIGLAS.put("Patrimônio Total",  "Patrimônio Total (PTA)\n= VTARF + VTARV + Dólar\nSoma de todos os ativos a valor atual de mercado.");
         SIGLAS.put("Total Investido",   "Total Investido (VTIA)\n= VIARF + VIARV\nCapital líquido efetivamente aplicado no período.");
         SIGLAS.put("Ganho / Perda",     "Ganho / Perda (VTRA)\n= RARF + DTA\nRendimentos de Renda Fixa + Dividendos de Renda Variável.");
-        SIGLAS.put("Aportado",          "Aportado no período\n= Σ Depósitos RF + Dólar + Σ Compras RV\nTotal bruto investido, sem descontar saques ou vendas.");
+        SIGLAS.put("Aportado",          "Aportado no período\n= Σ Depósitos RF + Dólar + Σ Compras RV − Σ Saques RF + Dólar − Σ Vendas RV\nCapital líquido aportado no período.");
         // ── Mini cards do Dashboard ───────────────────────────────────────
         SIGLAS.put("Renda Fixa",        "Renda Fixa\nValor principal: VIARF — capital líquido investido (depósitos − saques).\nSubtexto: RARF — rendimentos acumulados no período.");
         SIGLAS.put("Renda Variável",    "Renda Variável\nValor principal: PARV — patrimônio atual (VAC × QC).\nSubtexto: dividendos recebidos no período.");

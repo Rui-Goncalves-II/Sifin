@@ -131,21 +131,25 @@ public class ConsolidacaoService {
             if (inv.getTipo() == TipoInvestimento.RENDA_FIXA) {
                 var movs = todos ? movRepo.findByInvestimento(inv.getId())
                                  : movRepo.findByInvestimentoEAno(inv.getId(), ano);
-                for (var mov : movs)
+                for (var mov : movs) {
                     if (mov.getTipoMov() == TipoMovimentacao.DEPOSITO) total += mov.getValor();
+                    else if (mov.getTipoMov() == TipoMovimentacao.SAQUE) total -= mov.getValor();
+                }
             } else if (inv.getTipo() == TipoInvestimento.RENDA_VARIAVEL) {
                 var aportes = todos ? aporteRepo.findByInvestimento(inv.getId())
                                     : aporteRepo.findByInvestimentoEAno(inv.getId(), ano);
-                for (var a : aportes)
+                for (var a : aportes) {
                     if (a.getTipoOp() == TipoOperacaoRv.COMPRA) total += a.getValor();
+                    else if (a.getTipoOp() == TipoOperacaoRv.VENDA) total -= a.getValor();
+                }
             } else if (inv.getTipo() == TipoInvestimento.DOLAR) {
                 var movs = todos ? movRepo.findByInvestimento(inv.getId())
                                  : movRepo.findByInvestimentoEAno(inv.getId(), ano);
-                for (var mov : movs)
-                    if (mov.getTipoMov() == TipoMovimentacao.DEPOSITO) {
-                        double cot = mov.getCotacaoDolar() != null ? mov.getCotacaoDolar() : cotacaoDolar;
-                        total += mov.getValor() * cot;
-                    }
+                for (var mov : movs) {
+                    double cot = mov.getCotacaoDolar() != null ? mov.getCotacaoDolar() : cotacaoDolar;
+                    if (mov.getTipoMov() == TipoMovimentacao.DEPOSITO) total += mov.getValor() * cot;
+                    else if (mov.getTipoMov() == TipoMovimentacao.SAQUE) total -= mov.getValor() * cot;
+                }
             }
         }
         return total;
@@ -156,17 +160,21 @@ public class ConsolidacaoService {
         for (Investimento inv : invRepo.findAll()) {
             if (!tipos.contains(inv.getTipo())) continue;
             if (inv.getTipo() == TipoInvestimento.RENDA_FIXA) {
-                for (var mov : movRepo.findByInvestimentoAnoMes(inv.getId(), ano, mes))
+                for (var mov : movRepo.findByInvestimentoAnoMes(inv.getId(), ano, mes)) {
                     if (mov.getTipoMov() == TipoMovimentacao.DEPOSITO) total += mov.getValor();
+                    else if (mov.getTipoMov() == TipoMovimentacao.SAQUE) total -= mov.getValor();
+                }
             } else if (inv.getTipo() == TipoInvestimento.RENDA_VARIAVEL) {
-                for (var a : aporteRepo.findByInvestimentoAnoMes(inv.getId(), ano, mes))
+                for (var a : aporteRepo.findByInvestimentoAnoMes(inv.getId(), ano, mes)) {
                     if (a.getTipoOp() == TipoOperacaoRv.COMPRA) total += a.getValor();
+                    else if (a.getTipoOp() == TipoOperacaoRv.VENDA) total -= a.getValor();
+                }
             } else if (inv.getTipo() == TipoInvestimento.DOLAR) {
-                for (var mov : movRepo.findByInvestimentoAnoMes(inv.getId(), ano, mes))
-                    if (mov.getTipoMov() == TipoMovimentacao.DEPOSITO) {
-                        double cot = mov.getCotacaoDolar() != null ? mov.getCotacaoDolar() : cotacaoDolar;
-                        total += mov.getValor() * cot;
-                    }
+                for (var mov : movRepo.findByInvestimentoAnoMes(inv.getId(), ano, mes)) {
+                    double cot = mov.getCotacaoDolar() != null ? mov.getCotacaoDolar() : cotacaoDolar;
+                    if (mov.getTipoMov() == TipoMovimentacao.DEPOSITO) total += mov.getValor() * cot;
+                    else if (mov.getTipoMov() == TipoMovimentacao.SAQUE) total -= mov.getValor() * cot;
+                }
             }
         }
         return total;
