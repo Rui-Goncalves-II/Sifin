@@ -100,24 +100,17 @@ public class RendaVariavelListPanel extends BorderPane {
         colLeb.setPrefWidth(160);
 
         TableColumn<Investimento, Void> colAcoes = new TableColumn<>("Ações");
-        colAcoes.setMinWidth(120);
-        colAcoes.setPrefWidth(120);
-        colAcoes.setMaxWidth(120);
+        colAcoes.setMinWidth(60);
+        colAcoes.setPrefWidth(60);
+        colAcoes.setMaxWidth(60);
         colAcoes.setCellFactory(tc -> new TableCell<>() {
-            final Button btnVer = new Button("👁");
-            final Button btnOp = new Button("+ Op.");
-            final HBox box = new HBox(4, btnVer, btnOp);
+            final Button btnEdit = new Button("✏");
+            final HBox box = new HBox(4, btnEdit);
             {
-                btnVer.getStyleClass().add("btn-icon");
-                btnOp.getStyleClass().add("btn-secondary");
-                btnOp.setStyle("-fx-padding: 4 8; -fx-font-size: 15px;");
-                btnOp.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
-                btnVer.setOnAction(e -> navigate.accept(new RendaVariavelDetalhePanel(
-                        getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, brapiSvc, navigate)));
-                btnOp.setOnAction(e -> {
+                btnEdit.getStyleClass().add("btn-icon");
+                btnEdit.setOnAction(e -> {
                     new RendaVariavelFormDialog(getTableView().getItems().get(getIndex()), invRepo).showAndWait();
-                    navigate.accept(new RendaVariavelDetalhePanel(
-                            getTableView().getItems().get(getIndex()), invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, brapiSvc, navigate));
+                    refresh();
                 });
             }
             @Override protected void updateItem(Void v, boolean empty) {

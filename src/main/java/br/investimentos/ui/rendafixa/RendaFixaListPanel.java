@@ -62,52 +62,22 @@ public class RendaFixaListPanel extends BorderPane {
         colNome.setPrefWidth(220);
         colNome.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getNome()));
 
-        TableColumn<Investimento, String> colSub = col("Subtipo", 90);
-        colSub.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getSubtipo() != null ? c.getValue().getSubtipo() : "—"));
-
-        TableColumn<Investimento, String> colIdx = col("Indexador", 90);
-        colIdx.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getIndexador() != null ? c.getValue().getIndexador() : "—"));
-
-        TableColumn<Investimento, String> colTaxa = col("Taxa a.a.", 90);
-        colTaxa.setCellValueFactory(c -> {
-            Double t = c.getValue().getTaxaAnual();
-            return new javafx.beans.property.SimpleStringProperty(t != null ? FormatUtil.pct(t) : "calc.");
-        });
-
         TableColumn<Investimento, String> colSaldo = col("Saldo Atual", 140);
         colSaldo.setCellValueFactory(c -> {
             double s = saldoSvc.saldoAtual(c.getValue(), 0);
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(s));
         });
 
-        TableColumn<Investimento, String> colVenc = col("Vencimento", 100);
-        colVenc.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getDataVencimento() != null ? c.getValue().getDataVencimento() : "—"));
-
         TableColumn<Investimento, Void> colAcoes = new TableColumn<>("Ações");
-        double acoesW = Math.max(140, headerW("Ações"));
+        double acoesW = Math.max(60, headerW("Ações"));
         colAcoes.setMinWidth(acoesW);
         colAcoes.setPrefWidth(acoesW);
         colAcoes.setMaxWidth(acoesW);
         colAcoes.setCellFactory(tc -> new TableCell<>() {
-            final Button btnVer = new Button("👁");
-            final Button btnVta = new Button("VTA");
             final Button btnEdit = new Button("✏");
-            final HBox box = new HBox(4, btnVer, btnVta, btnEdit);
+            final HBox box = new HBox(4, btnEdit);
             {
-                btnVer.getStyleClass().add("btn-icon");
-                btnVta.getStyleClass().addAll("btn-secondary");
-                btnVta.setStyle("-fx-padding: 4 8; -fx-font-size: 15px;");
                 btnEdit.getStyleClass().add("btn-icon");
-                btnVer.setOnAction(e -> navigate.accept(new RendaFixaDetalhePanel(
-                        getTableView().getItems().get(getIndex()), invRepo, movRepo, vtaRepo,
-                        vaiRepo, rendSvc, taxaSvc, saldoSvc, vaiSvc, navigate)));
-                btnVta.setOnAction(e -> {
-                    new VtaFormDialog(getTableView().getItems().get(getIndex()), vtaRepo, vaiRepo, rendSvc, vaiSvc).showAndWait();
-                    refresh();
-                });
                 btnEdit.setOnAction(e -> abrirForm(getTableView().getItems().get(getIndex())));
             }
             @Override protected void updateItem(Void v, boolean empty) {
@@ -116,7 +86,7 @@ public class RendaFixaListPanel extends BorderPane {
             }
         });
 
-        table.getColumns().addAll(colNome, colSub, colIdx, colTaxa, colSaldo, colVenc, colAcoes);
+        table.getColumns().addAll(colNome, colSaldo, colAcoes);
 
         table.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2 && table.getSelectionModel().getSelectedItem() != null) {

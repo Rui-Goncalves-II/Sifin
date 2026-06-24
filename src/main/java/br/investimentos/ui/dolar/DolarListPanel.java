@@ -86,18 +86,14 @@ public class DolarListPanel extends BorderPane {
         colBrlVenda.setPrefWidth(130);
 
         TableColumn<Investimento, Void> colAcoes = new TableColumn<>("Ações");
-        colAcoes.setMinWidth(80);
-        colAcoes.setPrefWidth(80);
-        colAcoes.setMaxWidth(80);
+        colAcoes.setMinWidth(60);
+        colAcoes.setPrefWidth(60);
+        colAcoes.setMaxWidth(60);
         colAcoes.setCellFactory(tc -> new TableCell<>() {
-            final Button btnVer = new Button("👁");
             final Button btnEdit = new Button("✏");
-            final HBox box = new HBox(4, btnVer, btnEdit);
+            final HBox box = new HBox(4, btnEdit);
             {
-                btnVer.getStyleClass().add("btn-icon");
                 btnEdit.getStyleClass().add("btn-icon");
-                btnVer.setOnAction(e -> navigate.accept(new DolarDetalhePanel(
-                        getTableView().getItems().get(getIndex()), invRepo, movRepo, consolSvc, cotacaoSvc, navigate)));
                 btnEdit.setOnAction(e -> {
                     new DolarFormDialog(getTableView().getItems().get(getIndex()), invRepo).showAndWait();
                     refresh();
