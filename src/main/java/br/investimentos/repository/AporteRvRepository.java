@@ -14,7 +14,7 @@ public class AporteRvRepository {
 
     public AporteRv salvar(AporteRv a) {
         if (a.getId() == 0) {
-            String sql = "INSERT INTO aportes_rv (investimento_id,tipo_op,periodo_mes,periodo_ano,quantidade,preco_por_cota,valor,notas) VALUES (?,?,?,?,?,?,?,?)";
+            String sql = "INSERT INTO aportes_rv (investimento_id,tipo_op,periodo_dia,periodo_mes,periodo_ano,quantidade,preco_por_cota,valor,notas) VALUES (?,?,?,?,?,?,?,?,?)";
             try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 bind(ps, a);
                 ps.executeUpdate();
@@ -22,10 +22,10 @@ public class AporteRvRepository {
                 if (rs.next()) a.setId(rs.getInt(1));
             } catch (SQLException e) { throw new RuntimeException(e); }
         } else {
-            String sql = "UPDATE aportes_rv SET investimento_id=?,tipo_op=?,periodo_mes=?,periodo_ano=?,quantidade=?,preco_por_cota=?,valor=?,notas=? WHERE id=?";
+            String sql = "UPDATE aportes_rv SET investimento_id=?,tipo_op=?,periodo_dia=?,periodo_mes=?,periodo_ano=?,quantidade=?,preco_por_cota=?,valor=?,notas=? WHERE id=?";
             try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
                 bind(ps, a);
-                ps.setInt(9, a.getId());
+                ps.setInt(10, a.getId());
                 ps.executeUpdate();
             } catch (SQLException e) { throw new RuntimeException(e); }
         }
@@ -35,12 +35,13 @@ public class AporteRvRepository {
     private void bind(PreparedStatement ps, AporteRv a) throws SQLException {
         ps.setInt(1, a.getInvestimentoId());
         ps.setString(2, a.getTipoOp().name());
-        ps.setInt(3, a.getPeriodoMes());
-        ps.setInt(4, a.getPeriodoAno());
-        if (a.getQuantidade() != null) ps.setDouble(5, a.getQuantidade()); else ps.setNull(5, Types.REAL);
-        if (a.getPrecoPorCota() != null) ps.setDouble(6, a.getPrecoPorCota()); else ps.setNull(6, Types.REAL);
-        ps.setDouble(7, a.getValor());
-        ps.setString(8, a.getNotas());
+        ps.setInt(3, a.getPeriodoDia());
+        ps.setInt(4, a.getPeriodoMes());
+        ps.setInt(5, a.getPeriodoAno());
+        if (a.getQuantidade() != null) ps.setDouble(6, a.getQuantidade()); else ps.setNull(6, Types.REAL);
+        if (a.getPrecoPorCota() != null) ps.setDouble(7, a.getPrecoPorCota()); else ps.setNull(7, Types.REAL);
+        ps.setDouble(8, a.getValor());
+        ps.setString(9, a.getNotas());
     }
 
     public void deletar(int id) {
@@ -91,6 +92,7 @@ public class AporteRvRepository {
         a.setId(rs.getInt("id"));
         a.setInvestimentoId(rs.getInt("investimento_id"));
         a.setTipoOp(TipoOperacaoRv.valueOf(rs.getString("tipo_op")));
+        a.setPeriodoDia(rs.getInt("periodo_dia"));
         a.setPeriodoMes(rs.getInt("periodo_mes"));
         a.setPeriodoAno(rs.getInt("periodo_ano"));
         double qtd = rs.getDouble("quantidade");

@@ -37,6 +37,7 @@ public class NovaTransacaoDialog extends Stage {
     private ComboBox<TipoInvestimento> cbTipoAtivo;
     private TextField fAtivo;
     private ComboBox<String> cbTipoOp;
+    private ComboBox<Integer> fDia;
     private ComboBox<Integer> fMes;
     private TextField fAno;
     private TextField fQtd;
@@ -128,16 +129,19 @@ public class NovaTransacaoDialog extends Stage {
         cbTipoOp.setMaxWidth(Double.MAX_VALUE);
 
         // Período
-        Label lPeriodo = new Label("Período (mês/ano) *");
+        Label lPeriodo = new Label("Período (dia/mês/ano) *");
         lPeriodo.getStyleClass().add("form-label");
         LocalDate hoje = LocalDate.now();
+        fDia = new ComboBox<>();
+        for (int d = 1; d <= 31; d++) fDia.getItems().add(d);
+        fDia.setValue(hoje.getDayOfMonth());
         fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         fMes.setValue(hoje.getMonthValue());
         fAno = new TextField(String.valueOf(hoje.getYear()));
         fAno.setPrefWidth(80);
         InputUtil.applyIntegerFilter(fAno);
-        HBox periodoBox = new HBox(8, fMes, new Label("/"), fAno);
+        HBox periodoBox = new HBox(8, fDia, new Label("/"), fMes, new Label("/"), fAno);
         periodoBox.setAlignment(Pos.CENTER_LEFT);
 
         // Campos RV (condicionais)
@@ -282,9 +286,11 @@ public class NovaTransacaoDialog extends Stage {
             return;
         }
 
+        int dia;
         int mes;
         int ano;
         try {
+            dia = fDia.getValue();
             mes = fMes.getValue();
             ano = Integer.parseInt(fAno.getText().strip());
         } catch (Exception ex) {
@@ -309,6 +315,7 @@ public class NovaTransacaoDialog extends Stage {
                 AporteRv aporte = new AporteRv();
                 aporte.setInvestimentoId(investimentoSelecionado.getId());
                 aporte.setTipoOp(mapTipoOp(cbTipoOp.getValue()));
+                aporte.setPeriodoDia(dia);
                 aporte.setPeriodoMes(mes);
                 aporte.setPeriodoAno(ano);
                 aporte.setValor(valor);
@@ -324,6 +331,7 @@ public class NovaTransacaoDialog extends Stage {
                 Movimentacao mov = new Movimentacao();
                 mov.setInvestimentoId(investimentoSelecionado.getId());
                 mov.setTipoMov("Depósito".equals(cbTipoOp.getValue()) ? TipoMovimentacao.DEPOSITO : TipoMovimentacao.SAQUE);
+                mov.setPeriodoDia(dia);
                 mov.setPeriodoMes(mes);
                 mov.setPeriodoAno(ano);
                 mov.setValor(valor);

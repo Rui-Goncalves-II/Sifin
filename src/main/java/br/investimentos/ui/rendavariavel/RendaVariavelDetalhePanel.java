@@ -373,10 +373,18 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         for (VacMensal v : vacs)
             vacDs.addValue(v.getVac(), "VAC", FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()));
 
+        LocalDate hoje = LocalDate.now();
+        String mesAtual = FormatUtil.mesAno(hoje.getMonthValue(), hoje.getYear());
+        java.awt.Color hoje2   = new java.awt.Color(0x4c, 0xd1, 0x64);
+
         org.jfree.chart.renderer.category.LineAndShapeRenderer vacRend =
             new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
-                @Override public java.awt.Paint getItemPaint(int row, int col) { return blue; }
-                @Override public java.awt.Paint getItemFillPaint(int row, int col) { return blue; }
+                @Override public java.awt.Paint getItemPaint(int row, int col) {
+                    return mesAtual.equals(vacDs.getColumnKey(col)) ? hoje2 : blue;
+                }
+                @Override public java.awt.Paint getItemFillPaint(int row, int col) {
+                    return mesAtual.equals(vacDs.getColumnKey(col)) ? hoje2 : blue;
+                }
             };
         vacRend.setDefaultLinesVisible(true); vacRend.setDefaultShapesVisible(true);
         vacRend.setDefaultShapesFilled(true); vacRend.setUseFillPaint(true);
@@ -393,6 +401,18 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         org.jfree.chart.plot.CategoryPlot vacPlot = new org.jfree.chart.plot.CategoryPlot(vacDs, xV, yV, vacRend);
         vacPlot.setBackgroundPaint(bgCard); vacPlot.setOutlinePaint(border);
         vacPlot.setRangeGridlinePaint(border); vacPlot.setDomainGridlinesVisible(false);
+
+        if (vacDs.getColumnKeys().contains(mesAtual)) {
+            org.jfree.chart.plot.CategoryMarker marcadorHoje =
+                    new org.jfree.chart.plot.CategoryMarker(mesAtual, new java.awt.Color(0x4c, 0xd1, 0x64, 40),
+                            new java.awt.BasicStroke(1f));
+            marcadorHoje.setLabel("Hoje");
+            marcadorHoje.setLabelFont(fontXs);
+            marcadorHoje.setLabelPaint(hoje2);
+            marcadorHoje.setLabelAnchor(org.jfree.chart.ui.RectangleAnchor.TOP);
+            marcadorHoje.setLabelTextAnchor(org.jfree.chart.ui.TextAnchor.TOP_CENTER);
+            vacPlot.addDomainMarker(marcadorHoje, org.jfree.chart.ui.Layer.BACKGROUND);
+        }
 
         String vacTitle = (anoSelecionado != ANO_TODOS)
                 ? "VAC por Mês — " + anoSelecionado

@@ -46,7 +46,9 @@ public class DatabaseManager {
             "ALTER TABLE gastos ADD COLUMN parcela_numero INTEGER DEFAULT 1",
             "ALTER TABLE gastos ADD COLUMN grupo_parcela TEXT",
             "ALTER TABLE gastos ADD COLUMN fim_mes INTEGER",
-            "ALTER TABLE gastos ADD COLUMN fim_ano INTEGER"
+            "ALTER TABLE gastos ADD COLUMN fim_ano INTEGER",
+            "ALTER TABLE movimentacoes ADD COLUMN periodo_dia INTEGER DEFAULT 1",
+            "ALTER TABLE aportes_rv ADD COLUMN periodo_dia INTEGER DEFAULT 1"
         };
         try (Connection conn = DriverManager.getConnection(url);
              Statement st = conn.createStatement()) {

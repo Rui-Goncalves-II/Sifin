@@ -47,7 +47,7 @@ public class TransacaoPanel extends BorderPane {
     private TextField fValorMin;
     private TextField fValorMax;
 
-    record LinhaTransacao(int periodoMes, int periodoAno, String ativo, String tipoAtivo, String tipo, double valor, String notas) {}
+    record LinhaTransacao(int periodoDia, int periodoMes, int periodoAno, String ativo, String tipoAtivo, String tipo, double valor, String notas) {}
 
     public TransacaoPanel(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
                           AporteRvRepository aporteRepo, ImportExportService importExportSvc) {
@@ -382,8 +382,8 @@ public class TransacaoPanel extends BorderPane {
 
         TableColumn<LinhaTransacao, String> cPer = new TableColumn<>("Período");
         cPer.setCellValueFactory(c -> new SimpleStringProperty(
-                FormatUtil.mesAno(c.getValue().periodoMes(), c.getValue().periodoAno())));
-        cPer.setPrefWidth(100);
+                FormatUtil.diaMesAno(c.getValue().periodoDia(), c.getValue().periodoMes(), c.getValue().periodoAno())));
+        cPer.setPrefWidth(120);
 
         TableColumn<LinhaTransacao, String> cAtivo = new TableColumn<>("Ativo");
         cAtivo.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().ativo()));
@@ -450,13 +450,13 @@ public class TransacaoPanel extends BorderPane {
             String tipoAtivo = inv.getTipo().name();
             for (Movimentacao mov : movRepo.findByInvestimento(inv.getId())) {
                 todasLinhas.add(new LinhaTransacao(
-                        mov.getPeriodoMes(), mov.getPeriodoAno(),
+                        mov.getPeriodoDia(), mov.getPeriodoMes(), mov.getPeriodoAno(),
                         nome, tipoAtivo, mov.getTipoMov().name(),
                         mov.getValor(), mov.getNotas()));
             }
             for (AporteRv a : aporteRepo.findByInvestimento(inv.getId())) {
                 todasLinhas.add(new LinhaTransacao(
-                        a.getPeriodoMes(), a.getPeriodoAno(),
+                        a.getPeriodoDia(), a.getPeriodoMes(), a.getPeriodoAno(),
                         nome, tipoAtivo, a.getTipoOp().name(),
                         a.getValor(), a.getNotas()));
             }
@@ -464,6 +464,7 @@ public class TransacaoPanel extends BorderPane {
         todasLinhas.sort(Comparator
                 .comparingInt(LinhaTransacao::periodoAno)
                 .thenComparingInt(LinhaTransacao::periodoMes)
+                .thenComparingInt(LinhaTransacao::periodoDia)
                 .reversed());
     }
 }

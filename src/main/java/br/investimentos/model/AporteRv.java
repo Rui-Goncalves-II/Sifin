@@ -6,6 +6,7 @@ public class AporteRv {
     private int id;
     private int investimentoId;
     private TipoOperacaoRv tipoOp;
+    private int periodoDia;
     private int periodoMes;
     private int periodoAno;
     private Double quantidade;
@@ -20,6 +21,8 @@ public class AporteRv {
     public void setInvestimentoId(int investimentoId) { this.investimentoId = investimentoId; }
     public TipoOperacaoRv getTipoOp() { return tipoOp; }
     public void setTipoOp(TipoOperacaoRv tipoOp) { this.tipoOp = tipoOp; }
+    public int getPeriodoDia() { return periodoDia; }
+    public void setPeriodoDia(int periodoDia) { this.periodoDia = periodoDia; }
     public int getPeriodoMes() { return periodoMes; }
     public void setPeriodoMes(int periodoMes) { this.periodoMes = periodoMes; }
     public int getPeriodoAno() { return periodoAno; }

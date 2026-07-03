@@ -33,6 +33,10 @@ public final class FormatUtil {
         return String.format("%02d/%d", mes, ano);
     }
 
+    public static String diaMesAno(int dia, int mes, int ano) {
+        return String.format("%02d/%02d/%d", dia, mes, ano);
+    }
+
     public static String sinalBrl(double value) {
         return (value >= 0 ? "▲ " : "▼ ") + brl(Math.abs(value));
     }

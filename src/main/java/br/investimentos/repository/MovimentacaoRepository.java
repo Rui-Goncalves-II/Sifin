@@ -14,7 +14,7 @@ public class MovimentacaoRepository {
 
     public Movimentacao salvar(Movimentacao mov) {
         if (mov.getId() == 0) {
-            String sql = "INSERT INTO movimentacoes (investimento_id,periodo_mes,periodo_ano,tipo_mov,valor,cotacao_dolar,notas) VALUES (?,?,?,?,?,?,?)";
+            String sql = "INSERT INTO movimentacoes (investimento_id,periodo_dia,periodo_mes,periodo_ano,tipo_mov,valor,cotacao_dolar,notas) VALUES (?,?,?,?,?,?,?,?)";
             try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 bind(ps, mov);
                 ps.executeUpdate();
@@ -22,10 +22,10 @@ public class MovimentacaoRepository {
                 if (rs.next()) mov.setId(rs.getInt(1));
             } catch (SQLException e) { throw new RuntimeException(e); }
         } else {
-            String sql = "UPDATE movimentacoes SET investimento_id=?,periodo_mes=?,periodo_ano=?,tipo_mov=?,valor=?,cotacao_dolar=?,notas=? WHERE id=?";
+            String sql = "UPDATE movimentacoes SET investimento_id=?,periodo_dia=?,periodo_mes=?,periodo_ano=?,tipo_mov=?,valor=?,cotacao_dolar=?,notas=? WHERE id=?";
             try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
                 bind(ps, mov);
-                ps.setInt(8, mov.getId());
+                ps.setInt(9, mov.getId());
                 ps.executeUpdate();
             } catch (SQLException e) { throw new RuntimeException(e); }
         }
@@ -34,12 +34,13 @@ public class MovimentacaoRepository {
 
     private void bind(PreparedStatement ps, Movimentacao mov) throws SQLException {
         ps.setInt(1, mov.getInvestimentoId());
-        ps.setInt(2, mov.getPeriodoMes());
-        ps.setInt(3, mov.getPeriodoAno());
-        ps.setString(4, mov.getTipoMov().name());
-        ps.setDouble(5, mov.getValor());
-        if (mov.getCotacaoDolar() != null) ps.setDouble(6, mov.getCotacaoDolar()); else ps.setNull(6, Types.REAL);
-        ps.setString(7, mov.getNotas());
+        ps.setInt(2, mov.getPeriodoDia());
+        ps.setInt(3, mov.getPeriodoMes());
+        ps.setInt(4, mov.getPeriodoAno());
+        ps.setString(5, mov.getTipoMov().name());
+        ps.setDouble(6, mov.getValor());
+        if (mov.getCotacaoDolar() != null) ps.setDouble(7, mov.getCotacaoDolar()); else ps.setNull(7, Types.REAL);
+        ps.setString(8, mov.getNotas());
     }
 
     public void deletar(int id) {
@@ -106,6 +107,7 @@ public class MovimentacaoRepository {
         Movimentacao m = new Movimentacao();
         m.setId(rs.getInt("id"));
         m.setInvestimentoId(rs.getInt("investimento_id"));
+        m.setPeriodoDia(rs.getInt("periodo_dia"));
         m.setPeriodoMes(rs.getInt("periodo_mes"));
         m.setPeriodoAno(rs.getInt("periodo_ano"));
         m.setTipoMov(TipoMovimentacao.valueOf(rs.getString("tipo_mov")));
