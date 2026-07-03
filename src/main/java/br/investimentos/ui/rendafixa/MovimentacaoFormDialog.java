@@ -35,6 +35,9 @@ public class MovimentacaoFormDialog extends Dialog<Boolean> {
         fTipo.setValue(mov.getTipoMov() != null ? mov.getTipoMov() : TipoMovimentacao.DEPOSITO);
         addRow(form, 0, "Tipo *", fTipo);
 
+        ComboBox<Integer> fDia = new ComboBox<>();
+        for (int d = 1; d <= 31; d++) fDia.getItems().add(d);
+        fDia.setValue(mov.getPeriodoDia() != 0 ? mov.getPeriodoDia() : hoje.getDayOfMonth());
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         fMes.setValue(mov.getPeriodoMes() != 0 ? mov.getPeriodoMes() : hoje.getMonthValue());
@@ -42,9 +45,9 @@ public class MovimentacaoFormDialog extends Dialog<Boolean> {
         fAno.setPrefWidth(80);
         InputUtil.applyIntegerFilter(fAno);
         fAno.setText(mov.getPeriodoAno() != 0 ? String.valueOf(mov.getPeriodoAno()) : String.valueOf(hoje.getYear()));
-        HBox periodoBox = new HBox(8, fMes, new Label("/ "), fAno);
+        HBox periodoBox = new HBox(8, fDia, new Label("/"), fMes, new Label("/ "), fAno);
         periodoBox.setAlignment(Pos.CENTER_LEFT);
-        addRow(form, 1, "Período (mês/ano) *", periodoBox);
+        addRow(form, 1, "Período (dia/mês/ano) *", periodoBox);
 
         TextField fValor = new TextField();
         InputUtil.applyDecimalFilter(fValor);
@@ -67,6 +70,7 @@ public class MovimentacaoFormDialog extends Dialog<Boolean> {
         Button okBtn = (Button) getDialogPane().lookupButton(btnSalvar);
         okBtn.addEventFilter(ActionEvent.ACTION, e -> {
             try {
+                int dia = fDia.getValue();
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
                 double valor = InputUtil.parseDoubleField(fValor.getText());
@@ -77,6 +81,7 @@ public class MovimentacaoFormDialog extends Dialog<Boolean> {
                 }
                 mov.setInvestimentoId(inv.getId());
                 mov.setTipoMov(fTipo.getValue());
+                mov.setPeriodoDia(dia);
                 mov.setPeriodoMes(mes);
                 mov.setPeriodoAno(ano);
                 mov.setValor(valor);

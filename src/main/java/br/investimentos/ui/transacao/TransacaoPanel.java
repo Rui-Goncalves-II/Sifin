@@ -68,19 +68,6 @@ public class TransacaoPanel extends BorderPane {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Button btnNova = new Button("＋ Nova Transação");
-        btnNova.getStyleClass().add("btn-primary");
-        btnNova.setOnAction(e -> {
-            NovaTransacaoDialog dlg = new NovaTransacaoDialog(
-                getScene().getWindow(), invRepo, movRepo, aporteRepo);
-            dlg.setOnSalvo(() -> {
-                carregarDados();
-                recarregarFiltroAno();
-                aplicarFiltros();
-            });
-            dlg.showAndWait();
-        });
-
         Button btnExportar = new Button("⬇ Exportar CSV");
         btnExportar.getStyleClass().add("btn-secondary");
         btnExportar.setOnAction(e -> exportarCSV());
@@ -93,7 +80,7 @@ public class TransacaoPanel extends BorderPane {
         btnImportar.getStyleClass().add("btn-primary");
         btnImportar.setOnAction(e -> importarCSV());
 
-        header.getChildren().addAll(title, spacer, btnNova, btnExportar, btnRestaurar, btnImportar);
+        header.getChildren().addAll(title, spacer, btnExportar, btnRestaurar, btnImportar);
         setTop(header);
 
         carregarDados();

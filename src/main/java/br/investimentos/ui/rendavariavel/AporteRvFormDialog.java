@@ -29,13 +29,15 @@ public class AporteRvFormDialog extends Dialog<Void> {
         fTipo.getItems().addAll(TipoOperacaoRv.values());
         addRow(form, 0, "Tipo *", fTipo);
 
+        ComboBox<Integer> fDia = new ComboBox<>();
+        for (int d = 1; d <= 31; d++) fDia.getItems().add(d);
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         TextField fAno = new TextField(); fAno.setPrefWidth(70);
         InputUtil.applyIntegerFilter(fAno);
-        HBox perBox = new HBox(8, fMes, new Label("/ "), fAno);
+        HBox perBox = new HBox(8, fDia, new Label("/"), fMes, new Label("/ "), fAno);
         perBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        addRow(form, 1, "Período", perBox);
+        addRow(form, 1, "Período (dia/mês/ano)", perBox);
 
         TextField fQtd = new TextField();
         InputUtil.applyDecimalFilter(fQtd);
@@ -57,6 +59,7 @@ public class AporteRvFormDialog extends Dialog<Void> {
 
         // Pre-fill antes de configurar listeners para evitar efeitos colaterais
         fTipo.setValue(isEdit && aporte.getTipoOp() != null ? aporte.getTipoOp() : TipoOperacaoRv.COMPRA);
+        fDia.setValue(isEdit && aporte.getPeriodoDia() != 0 ? aporte.getPeriodoDia() : hoje.getDayOfMonth());
         fMes.setValue(isEdit && aporte.getPeriodoMes() != 0 ? aporte.getPeriodoMes() : hoje.getMonthValue());
         fAno.setText(isEdit && aporte.getPeriodoAno() != 0 ? String.valueOf(aporte.getPeriodoAno()) : String.valueOf(hoje.getYear()));
         if (isEdit) {
@@ -97,6 +100,7 @@ public class AporteRvFormDialog extends Dialog<Void> {
 
         ((Button) getDialogPane().lookupButton(btnSalvar)).addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
             try {
+                int dia = fDia.getValue();
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
                 double valor = InputUtil.parseDoubleField(fValor.getText());
@@ -104,6 +108,7 @@ public class AporteRvFormDialog extends Dialog<Void> {
 
                 aporte.setInvestimentoId(inv.getId());
                 aporte.setTipoOp(tipo);
+                aporte.setPeriodoDia(dia);
                 aporte.setPeriodoMes(mes); aporte.setPeriodoAno(ano);
                 aporte.setValor(valor);
                 aporte.setNotas(fNotas.getText().strip().isEmpty() ? null : fNotas.getText().strip());

@@ -29,13 +29,15 @@ public class DolarMovFormDialog extends Dialog<Void> {
         fTipo.getItems().addAll(TipoMovimentacao.values());
         addRow(form, 0, "Tipo *", fTipo);
 
+        ComboBox<Integer> fDia = new ComboBox<>();
+        for (int d = 1; d <= 31; d++) fDia.getItems().add(d);
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         TextField fAno = new TextField(); fAno.setPrefWidth(70);
         InputUtil.applyIntegerFilter(fAno);
-        HBox perBox = new HBox(8, fMes, new Label("/ "), fAno);
+        HBox perBox = new HBox(8, fDia, new Label("/"), fMes, new Label("/ "), fAno);
         perBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        addRow(form, 1, "Período", perBox);
+        addRow(form, 1, "Período (dia/mês/ano)", perBox);
 
         TextField fValor = new TextField();
         InputUtil.applyDecimalFilter(fValor);
@@ -52,6 +54,7 @@ public class DolarMovFormDialog extends Dialog<Void> {
 
         // Pre-fill para edição
         fTipo.setValue(isEdit && mov.getTipoMov() != null ? mov.getTipoMov() : TipoMovimentacao.DEPOSITO);
+        fDia.setValue(isEdit && mov.getPeriodoDia() != 0 ? mov.getPeriodoDia() : hoje.getDayOfMonth());
         fMes.setValue(isEdit && mov.getPeriodoMes() != 0 ? mov.getPeriodoMes() : hoje.getMonthValue());
         fAno.setText(isEdit && mov.getPeriodoAno() != 0 ? String.valueOf(mov.getPeriodoAno()) : String.valueOf(hoje.getYear()));
         if (isEdit) {
@@ -68,12 +71,14 @@ public class DolarMovFormDialog extends Dialog<Void> {
 
         ((Button) getDialogPane().lookupButton(btnSalvar)).addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
             try {
+                int dia = fDia.getValue();
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
                 double valor = InputUtil.parseDoubleField(fValor.getText());
 
                 mov.setInvestimentoId(inv.getId());
                 mov.setTipoMov(fTipo.getValue());
+                mov.setPeriodoDia(dia);
                 mov.setPeriodoMes(mes); mov.setPeriodoAno(ano);
                 mov.setValor(valor);
                 mov.setCotacaoDolar(!fCot.getText().isBlank() ? InputUtil.parseDoubleField(fCot.getText()) : null);
