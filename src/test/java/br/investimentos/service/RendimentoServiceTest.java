@@ -87,7 +87,7 @@ class RendimentoServiceTest {
 
     @Test
     void calcularR_porIdMesAno_semVta_retornaZero() {
-        when(vtaRepo.find(1, 6, 2025)).thenReturn(Optional.empty());
+        when(vtaRepo.findUltimoDoMes(1, 6, 2025)).thenReturn(Optional.empty());
 
         assertEquals(0.0, svc.calcularR(1, 6, 2025), 1e-10);
     }
@@ -95,7 +95,7 @@ class RendimentoServiceTest {
     @Test
     void calcularR_porIdMesAno_comVta() {
         VtaMensal vta = vtaMensal(1, 6, 2025, 10500.0);
-        when(vtaRepo.find(1, 6, 2025)).thenReturn(Optional.of(vta));
+        when(vtaRepo.findUltimoDoMes(1, 6, 2025)).thenReturn(Optional.of(vta));
         when(vaiRepo.getVai(1, 2025)).thenReturn(10000.0);
         when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 6)).thenReturn(List.of());
 
