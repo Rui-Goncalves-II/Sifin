@@ -197,8 +197,8 @@ public class RendaFixaDetalhePanel extends BorderPane {
 
         TableColumn<VtaMensal, String> cPer = new TableColumn<>("Período");
         cPer.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                FormatUtil.mesAno(c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
-        cPer.setPrefWidth(100);
+                FormatUtil.diaMesAno(c.getValue().getPeriodoDia(), c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
+        cPer.setPrefWidth(110);
 
         TableColumn<VtaMensal, String> cVta = new TableColumn<>();
         cVta.setGraphic(colHeader("VTA"));
@@ -270,7 +270,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
                 btnDel.setOnAction(e -> {
                     VtaMensal v = getTableView().getItems().get(getIndex());
                     Alert conf = new Alert(Alert.AlertType.CONFIRMATION,
-                            "Excluir VTA de " + FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()) + "?",
+                            "Excluir VTA de " + FormatUtil.diaMesAno(v.getPeriodoDia(), v.getPeriodoMes(), v.getPeriodoAno()) + "?",
                             ButtonType.YES, ButtonType.NO);
                     conf.setTitle("Confirmar exclusão");
                     conf.showAndWait().ifPresent(bt -> {
@@ -317,8 +317,8 @@ public class RendaFixaDetalhePanel extends BorderPane {
 
         TableColumn<Movimentacao, String> mPer = new TableColumn<>("Período");
         mPer.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                FormatUtil.mesAno(c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
-        mPer.setPrefWidth(100);
+                FormatUtil.diaMesAno(c.getValue().getPeriodoDia(), c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
+        mPer.setPrefWidth(110);
 
         TableColumn<Movimentacao, String> mTipo = new TableColumn<>("Tipo");
         mTipo.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
@@ -414,7 +414,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
         // ── Saldo (VTA) por Mês ──────────────────────────────────────────
         DefaultCategoryDataset saldoDs = new DefaultCategoryDataset();
         for (VtaMensal v : vtas)
-            saldoDs.addValue(v.getVta(), "Saldo", FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()));
+            saldoDs.addValue(v.getVta(), "Saldo", FormatUtil.diaMesAno(v.getPeriodoDia(), v.getPeriodoMes(), v.getPeriodoAno()));
 
         org.jfree.chart.renderer.category.LineAndShapeRenderer saldoRend =
             new org.jfree.chart.renderer.category.LineAndShapeRenderer() {
@@ -454,7 +454,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
         DefaultCategoryDataset rendDs = new DefaultCategoryDataset();
         for (VtaMensal v : vtas) {
             double rMensal = rendSvc.calcularR(v) - somaAntByVtaId.getOrDefault(v.getId(), 0.0);
-            rendDs.addValue(rMensal, "Rendimento", FormatUtil.mesAno(v.getPeriodoMes(), v.getPeriodoAno()));
+            rendDs.addValue(rMensal, "Rendimento", FormatUtil.diaMesAno(v.getPeriodoDia(), v.getPeriodoMes(), v.getPeriodoAno()));
         }
 
         org.jfree.chart.renderer.category.LineAndShapeRenderer rendRend =

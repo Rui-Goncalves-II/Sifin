@@ -337,8 +337,8 @@ public class GastosListPanel extends BorderPane {
 
         TableColumn<Gasto, String> cPer = new TableColumn<>("Período");
         cPer.setCellValueFactory(c -> new SimpleStringProperty(
-                FormatUtil.mesAno(c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
-        cPer.setPrefWidth(90);
+                FormatUtil.diaMesAno(c.getValue().getPeriodoDia(), c.getValue().getPeriodoMes(), c.getValue().getPeriodoAno())));
+        cPer.setPrefWidth(100);
 
         TableColumn<Gasto, String> cParc = new TableColumn<>("Parcela");
         cParc.setCellValueFactory(c -> {

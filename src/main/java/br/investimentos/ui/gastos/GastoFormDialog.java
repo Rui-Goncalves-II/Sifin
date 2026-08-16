@@ -34,6 +34,7 @@ public class GastoFormDialog extends Stage {
     private Runnable onSalvo;
 
     private TextField fDescricao;
+    private TextField fDia;
     private TextField fMes;
     private TextField fAno;
     private TextField fValor;
@@ -95,6 +96,12 @@ public class GastoFormDialog extends Stage {
             }
         });
 
+        fDia = new TextField();
+        InputUtil.applyIntegerFilter(fDia);
+        fDia.setPromptText("1–31");
+        if (existente != null) fDia.setText(String.valueOf(existente.getPeriodoDia()));
+        else fDia.setText(String.valueOf(LocalDate.now().getDayOfMonth()));
+
         fMes = new TextField();
         InputUtil.applyIntegerFilter(fMes);
         fMes.setPromptText("1–12");
@@ -121,8 +128,9 @@ public class GastoFormDialog extends Stage {
         fNotas.setStyle("-fx-font-size: 15px;");
         if (existente != null && existente.getNotas() != null) fNotas.setText(existente.getNotas());
 
-        HBox periodoRow = new HBox(12, campo("Mês", fMes), campo("Ano", fAno));
+        HBox periodoRow = new HBox(12, campo("Dia", fDia), campo("Mês", fMes), campo("Ano", fAno));
         periodoRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(fDia, Priority.ALWAYS);
         HBox.setHgrow(fMes, Priority.ALWAYS);
         HBox.setHgrow(fAno, Priority.ALWAYS);
 
@@ -214,6 +222,12 @@ public class GastoFormDialog extends Stage {
         String desc = fDescricao.getText().strip();
         if (desc.isBlank()) { alert("Informe a descrição."); return; }
 
+        int dia;
+        try {
+            dia = Integer.parseInt(fDia.getText().strip());
+            if (dia < 1 || dia > 31) throw new NumberFormatException();
+        } catch (NumberFormatException ex) { alert("Dia inválido (1–31)."); return; }
+
         int mes;
         try {
             mes = Integer.parseInt(fMes.getText().strip());
@@ -242,19 +256,20 @@ public class GastoFormDialog extends Stage {
         }
 
         if (parcelado) {
-            salvarParcelado(desc, mes, ano, valorBD, nParcelas);
+            salvarParcelado(desc, dia, mes, ano, valorBD, nParcelas);
         } else {
-            salvarSimples(desc, mes, ano, valorBD.doubleValue());
+            salvarSimples(desc, dia, mes, ano, valorBD.doubleValue());
         }
 
         if (onSalvo != null) onSalvo.run();
         close();
     }
 
-    private void salvarSimples(String desc, int mes, int ano, double valor) {
+    private void salvarSimples(String desc, int dia, int mes, int ano, double valor) {
         Gasto g = existente != null ? existente : new Gasto();
         g.setTipo(tipo);
         g.setDescricao(desc);
+        g.setPeriodoDia(dia);
         g.setPeriodoMes(mes);
         g.setPeriodoAno(ano);
         g.setValor(valor);
@@ -262,7 +277,7 @@ public class GastoFormDialog extends Stage {
         repo.salvar(g);
     }
 
-    private void salvarParcelado(String desc, int mesPrimeiro, int anoPrimeiro,
+    private void salvarParcelado(String desc, int diaPrimeira, int mesPrimeiro, int anoPrimeiro,
                                   BigDecimal total, int nParcelas) {
         BigDecimal n = BigDecimal.valueOf(nParcelas);
         BigDecimal valorParcela = total.divide(n, 2, RoundingMode.HALF_UP);
@@ -275,9 +290,11 @@ public class GastoFormDialog extends Stage {
         List<Gasto> parcelas = new ArrayList<>();
         for (int i = 0; i < nParcelas; i++) {
             LocalDate d = LocalDate.of(anoPrimeiro, mesPrimeiro, 1).plusMonths(i);
+            int diaParcela = Math.min(diaPrimeira, d.lengthOfMonth());
             Gasto g = new Gasto();
             g.setTipo(tipo);
             g.setDescricao(desc);
+            g.setPeriodoDia(diaParcela);
             g.setPeriodoMes(d.getMonthValue());
             g.setPeriodoAno(d.getYear());
             g.setValor((i == 0 ? valorPrimeira : valorParcela).doubleValue());

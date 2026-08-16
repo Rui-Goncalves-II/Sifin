@@ -31,7 +31,7 @@ public class AlertaService {
         List<String> alertas = new ArrayList<>();
 
         for (Investimento inv : invRepo.findByTipo(TipoInvestimento.RENDA_FIXA)) {
-            if (vtaRepo.find(inv.getId(), mes, ano).isEmpty()) {
+            if (vtaRepo.findUltimoDoMes(inv.getId(), mes, ano).isEmpty()) {
                 alertas.add("⚠ " + inv.getNome() + ": VTA de " + periodo + " não informado.");
             }
         }

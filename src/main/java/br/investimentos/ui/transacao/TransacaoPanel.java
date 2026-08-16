@@ -1,10 +1,13 @@
 package br.investimentos.ui.transacao;
 
 import br.investimentos.model.AporteRv;
+import br.investimentos.model.Gasto;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.Movimentacao;
+import br.investimentos.model.enums.TipoGasto;
 import br.investimentos.db.DatabaseManager;
 import br.investimentos.repository.AporteRvRepository;
+import br.investimentos.repository.GastoRepository;
 import br.investimentos.repository.InvestimentoRepository;
 import br.investimentos.repository.MovimentacaoRepository;
 import br.investimentos.service.ImportExportService;
@@ -34,6 +37,7 @@ public class TransacaoPanel extends BorderPane {
     private final InvestimentoRepository invRepo;
     private final MovimentacaoRepository movRepo;
     private final AporteRvRepository aporteRepo;
+    private final GastoRepository gastoRepo;
     private final ImportExportService importExportSvc;
 
     private List<LinhaTransacao> todasLinhas = new ArrayList<>();
@@ -50,10 +54,12 @@ public class TransacaoPanel extends BorderPane {
     record LinhaTransacao(int periodoDia, int periodoMes, int periodoAno, String ativo, String tipoAtivo, String tipo, double valor, String notas) {}
 
     public TransacaoPanel(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
-                          AporteRvRepository aporteRepo, ImportExportService importExportSvc) {
+                          AporteRvRepository aporteRepo, GastoRepository gastoRepo,
+                          ImportExportService importExportSvc) {
         this.invRepo = invRepo;
         this.movRepo = movRepo;
         this.aporteRepo = aporteRepo;
+        this.gastoRepo = gastoRepo;
         this.importExportSvc = importExportSvc;
         construir();
     }
@@ -222,7 +228,7 @@ public class TransacaoPanel extends BorderPane {
         Label lTipoAtivo = new Label("Tipo de ativo");
         lTipoAtivo.getStyleClass().add("card-label");
         cbTipoAtivo = new ComboBox<>();
-        cbTipoAtivo.getItems().addAll("Todos", "Renda Fixa", "Renda Variável", "Dólar");
+        cbTipoAtivo.getItems().addAll("Todos", "Renda Fixa", "Renda Variável", "Dólar", "Gastos");
         cbTipoAtivo.setValue("Todos");
         cbTipoAtivo.setMaxWidth(Double.MAX_VALUE);
         cbTipoAtivo.setStyle("-fx-font-size: 15px;");
@@ -232,7 +238,7 @@ public class TransacaoPanel extends BorderPane {
         Label lTipoTrans = new Label("Tipo de transação");
         lTipoTrans.getStyleClass().add("card-label");
         cbTipoTransacao = new ComboBox<>();
-        cbTipoTransacao.getItems().addAll("Todos", "Depósito", "Saque", "Compra", "Venda", "Dividendo");
+        cbTipoTransacao.getItems().addAll("Todos", "Depósito", "Saque", "Compra", "Venda", "Dividendo", "Alimentar", "Diversos");
         cbTipoTransacao.setValue("Todos");
         cbTipoTransacao.setMaxWidth(Double.MAX_VALUE);
         cbTipoTransacao.setStyle("-fx-font-size: 15px;");
@@ -346,6 +352,7 @@ public class TransacaoPanel extends BorderPane {
             case "Renda Fixa"     -> "RENDA_FIXA".equals(tipoAtivo);
             case "Renda Variável" -> "RENDA_VARIAVEL".equals(tipoAtivo);
             case "Dólar"          -> "DOLAR".equals(tipoAtivo);
+            case "Gastos"         -> "GASTO".equals(tipoAtivo);
             default -> true;
         };
     }
@@ -357,6 +364,8 @@ public class TransacaoPanel extends BorderPane {
             case "Compra"    -> "COMPRA".equals(tipo);
             case "Venda"     -> "VENDA".equals(tipo);
             case "Dividendo" -> "DIVIDENDO".equals(tipo);
+            case "Alimentar" -> "ALIMENTAR".equals(tipo);
+            case "Diversos"  -> "DIVERSO".equals(tipo);
             default -> true;
         };
     }
@@ -396,7 +405,7 @@ public class TransacaoPanel extends BorderPane {
                     setText(null); setStyle(""); return;
                 }
                 LinhaTransacao linha = getTableRow().getItem();
-                boolean entrada = !linha.tipo().equals("SAQUE") && !linha.tipo().equals("VENDA");
+                boolean entrada = !Set.of("SAQUE", "VENDA", "ALIMENTAR", "DIVERSO").contains(linha.tipo());
                 setText(item + (entrada ? " ▲" : " ▼"));
                 setStyle("-fx-text-fill: " + (entrada ? "#2e7d32" : "#c62828") + "; -fx-alignment: CENTER-RIGHT;");
             }
@@ -417,6 +426,8 @@ public class TransacaoPanel extends BorderPane {
             case "COMPRA"    -> "Compra";
             case "VENDA"     -> "Venda";
             case "DIVIDENDO" -> "Dividendo";
+            case "ALIMENTAR" -> "Alimentar";
+            case "DIVERSO"   -> "Diversos";
             default -> tipo;
         };
     }
@@ -426,6 +437,7 @@ public class TransacaoPanel extends BorderPane {
             case "RENDA_FIXA"     -> "Renda Fixa";
             case "RENDA_VARIAVEL" -> "Renda Variável";
             case "DOLAR"          -> "Dólar";
+            case "GASTO"          -> "Gastos";
             default -> tipo;
         };
     }
@@ -447,6 +459,13 @@ public class TransacaoPanel extends BorderPane {
                         nome, tipoAtivo, a.getTipoOp().name(),
                         a.getValor(), a.getNotas()));
             }
+        }
+        for (Gasto g : gastoRepo.findAll()) {
+            if (g.getTipo() == TipoGasto.MENSALIDADE) continue;
+            todasLinhas.add(new LinhaTransacao(
+                    g.getPeriodoDia(), g.getPeriodoMes(), g.getPeriodoAno(),
+                    g.getDescricao(), "GASTO", g.getTipo().name(),
+                    g.getValor(), g.getNotas()));
         }
         todasLinhas.sort(Comparator
                 .comparingInt(LinhaTransacao::periodoAno)

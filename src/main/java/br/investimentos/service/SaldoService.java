@@ -24,7 +24,7 @@ public class SaldoService {
      * Aporte mensal usado na projeção.
      */
     public double saldo(Investimento inv, int mes, int ano, double aporteMensal) {
-        Optional<VtaMensal> vtaOpt = vtaRepo.find(inv.getId(), mes, ano);
+        Optional<VtaMensal> vtaOpt = vtaRepo.findUltimoDoMes(inv.getId(), mes, ano);
         if (vtaOpt.isPresent()) return vtaOpt.get().getVta();
 
         // Projeta a partir do último VTA disponível

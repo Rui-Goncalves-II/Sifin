@@ -48,7 +48,8 @@ public class DatabaseManager {
             "ALTER TABLE gastos ADD COLUMN fim_mes INTEGER",
             "ALTER TABLE gastos ADD COLUMN fim_ano INTEGER",
             "ALTER TABLE movimentacoes ADD COLUMN periodo_dia INTEGER DEFAULT 1",
-            "ALTER TABLE aportes_rv ADD COLUMN periodo_dia INTEGER DEFAULT 1"
+            "ALTER TABLE aportes_rv ADD COLUMN periodo_dia INTEGER DEFAULT 1",
+            "ALTER TABLE gastos ADD COLUMN periodo_dia INTEGER DEFAULT 1"
         };
         try (Connection conn = DriverManager.getConnection(url);
              Statement st = conn.createStatement()) {
@@ -59,6 +60,54 @@ public class DatabaseManager {
             throw new RuntimeException("Failed to run migrations", e);
         }
         migrateGastosPeriodoNullable();
+        migrateVtaMensalPeriodoDia();
+    }
+
+    private void migrateVtaMensalPeriodoDia() {
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement st = conn.createStatement()) {
+            boolean needsMigration = true;
+            try (java.sql.ResultSet rs = st.executeQuery("PRAGMA table_info(vta_mensal)")) {
+                while (rs.next()) {
+                    if ("periodo_dia".equals(rs.getString("name"))) {
+                        needsMigration = false;
+                        break;
+                    }
+                }
+            }
+            if (!needsMigration) return;
+
+            conn.setAutoCommit(false);
+            try {
+                st.execute("ALTER TABLE vta_mensal RENAME TO vta_mensal_old");
+                st.execute(
+                    "CREATE TABLE vta_mensal (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "investimento_id INTEGER NOT NULL REFERENCES investimentos(id) ON DELETE RESTRICT, " +
+                    "periodo_dia INTEGER NOT NULL DEFAULT 1, " +
+                    "periodo_mes INTEGER NOT NULL, " +
+                    "periodo_ano INTEGER NOT NULL, " +
+                    "vta REAL NOT NULL, " +
+                    "criado_em TEXT DEFAULT (datetime('now','localtime')), " +
+                    "atualizado_em TEXT DEFAULT (datetime('now','localtime')), " +
+                    "UNIQUE (investimento_id, periodo_dia, periodo_mes, periodo_ano)" +
+                    ")"
+                );
+                st.execute(
+                    "INSERT INTO vta_mensal (id,investimento_id,periodo_dia,periodo_mes,periodo_ano,vta,criado_em,atualizado_em) " +
+                    "SELECT id,investimento_id,1,periodo_mes,periodo_ano,vta,criado_em,atualizado_em FROM vta_mensal_old"
+                );
+                st.execute("DROP TABLE vta_mensal_old");
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Migration failed: vta_mensal periodo_dia", e);
+        }
     }
 
     private void migrateGastosPeriodoNullable() {

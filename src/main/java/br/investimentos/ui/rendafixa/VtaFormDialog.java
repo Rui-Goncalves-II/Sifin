@@ -31,6 +31,7 @@ public class VtaFormDialog extends Dialog<Void> {
         initModality(Modality.APPLICATION_MODAL);
 
         LocalDate hoje = LocalDate.now();
+        int diaDefault = preFill != null ? preFill.getPeriodoDia() : hoje.getDayOfMonth();
         int mesDefault = preFill != null ? preFill.getPeriodoMes() : hoje.getMonthValue();
         int anoDefault = preFill != null ? preFill.getPeriodoAno() : hoje.getYear();
 
@@ -41,6 +42,9 @@ public class VtaFormDialog extends Dialog<Void> {
         form.setMinWidth(400);
 
         // Período
+        ComboBox<Integer> fDia = new ComboBox<>();
+        for (int d = 1; d <= 31; d++) fDia.getItems().add(d);
+        fDia.setValue(diaDefault);
         ComboBox<Integer> fMes = new ComboBox<>();
         for (int m = 1; m <= 12; m++) fMes.getItems().add(m);
         fMes.setValue(mesDefault);
@@ -48,9 +52,9 @@ public class VtaFormDialog extends Dialog<Void> {
         fAno.setPrefWidth(80);
         InputUtil.applyIntegerFilter(fAno);
         fAno.setText(String.valueOf(anoDefault));
-        HBox periodoBox = new HBox(8, fMes, new Label("/ "), fAno);
+        HBox periodoBox = new HBox(8, fDia, new Label("/"), fMes, new Label("/ "), fAno);
         periodoBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        addRow(form, 0, "Período (mês/ano)", periodoBox);
+        addRow(form, 0, "Período (dia/mês/ano)", periodoBox);
 
         // VTA
         TextField fVta = new TextField();
@@ -70,7 +74,7 @@ public class VtaFormDialog extends Dialog<Void> {
         if (preFill != null) {
             fVta.setText(String.valueOf(preFill.getVta()));
         } else {
-            vtaRepo.find(inv.getId(), mesDefault, anoDefault)
+            vtaRepo.findUltimoDoMes(inv.getId(), mesDefault, anoDefault)
                     .ifPresent(v -> fVta.setText(String.valueOf(v.getVta())));
         }
 
@@ -104,12 +108,14 @@ public class VtaFormDialog extends Dialog<Void> {
         final Button okBtn = (Button) getDialogPane().lookupButton(btnSalvar);
         okBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
             try {
+                int dia = fDia.getValue();
                 int mes = fMes.getValue();
                 int ano = Integer.parseInt(fAno.getText().strip());
                 double vta = InputUtil.parseDoubleField(fVta.getText());
 
                 VtaMensal vtaM = new VtaMensal();
                 vtaM.setInvestimentoId(inv.getId());
+                vtaM.setPeriodoDia(dia);
                 vtaM.setPeriodoMes(mes);
                 vtaM.setPeriodoAno(ano);
                 vtaM.setVta(vta);

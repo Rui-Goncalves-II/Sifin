@@ -42,7 +42,7 @@ public class RendimentoService {
 
     /** R = VTA − VI para uma entrada de VTA. Pode ser negativo. */
     public double calcularR(int investimentoId, int mes, int ano) {
-        Optional<VtaMensal> opt = vtaRepo.find(investimentoId, mes, ano);
+        Optional<VtaMensal> opt = vtaRepo.findUltimoDoMes(investimentoId, mes, ano);
         if (opt.isEmpty()) return 0;
         double vta = opt.get().getVta();
         double vi = calcularVi(investimentoId, ano, mes);

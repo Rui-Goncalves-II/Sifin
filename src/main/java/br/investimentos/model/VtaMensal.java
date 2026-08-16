@@ -3,6 +3,7 @@ package br.investimentos.model;
 public class VtaMensal {
     private int id;
     private int investimentoId;
+    private int periodoDia;
     private int periodoMes;
     private int periodoAno;
     private double vta;
@@ -13,6 +14,8 @@ public class VtaMensal {
     public void setId(int id) { this.id = id; }
     public int getInvestimentoId() { return investimentoId; }
     public void setInvestimentoId(int investimentoId) { this.investimentoId = investimentoId; }
+    public int getPeriodoDia() { return periodoDia; }
+    public void setPeriodoDia(int periodoDia) { this.periodoDia = periodoDia; }
     public int getPeriodoMes() { return periodoMes; }
     public void setPeriodoMes(int periodoMes) { this.periodoMes = periodoMes; }
     public int getPeriodoAno() { return periodoAno; }

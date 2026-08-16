@@ -42,7 +42,8 @@ public class ConsolidacaoService {
             double viarv, double parv, double dta, double vtarv,
             double vtia, double vtra, double pta,
             Double pcpa, Double prat,
-            boolean todosOsAnos
+            boolean todosOsAnos,
+            double samRf
     ) {}
 
     public ConsolidacaoService(InvestimentoRepository invRepo, MovimentacaoRepository movRepo,
@@ -68,6 +69,7 @@ public class ConsolidacaoService {
 
         boolean todos = ano == ANO_TODOS;
         double viarf = 0, rarf = 0;
+        double samRf = 0; // dinheiro líquido que entrou no período (sem VAI) — usado no KPI "Total Investido"
 
         if (!tiposRf.isEmpty()) {
             for (Investimento inv : invRepo.findByTipo(TipoInvestimento.RENDA_FIXA)) {
@@ -80,6 +82,7 @@ public class ConsolidacaoService {
                     for (var mov : movRepo.findByInvestimento(inv.getId()))
                         depositosTotal += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
                     viarf += depositosTotal;
+                    samRf += depositosTotal;
                     // Rendimento all-time = último VTA − total depositado
                     if (!vtas.isEmpty())
                         rarf += vtas.get(vtas.size() - 1).getVta() - depositosTotal;
@@ -90,6 +93,7 @@ public class ConsolidacaoService {
                     for (var mov : movRepo.findByInvestimentoEAno(inv.getId(), ano))
                         sam += mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
                     viarf += vai + sam;
+                    samRf += sam;
                     // Rendimento = VTA − (VAI + SAM)
                     if (!vtas.isEmpty()) rarf += rendimentoService.calcularR(vtas.get(vtas.size() - 1));
                 }
@@ -120,7 +124,7 @@ public class ConsolidacaoService {
         Double prat = vtia > 0 ? (vtra / vtia) * 100 : null;
 
         return new ResultadoConsolidado(viarf, rarf, vtarf, viarv, parv, dta, vtarv,
-                vtia, vtra, pta, pcpa, prat, todos);
+                vtia, vtra, pta, pcpa, prat, todos, samRf);
     }
 
     public double calcularAportesDoAno(int ano, Set<TipoInvestimento> tipos, double cotacaoDolar) {

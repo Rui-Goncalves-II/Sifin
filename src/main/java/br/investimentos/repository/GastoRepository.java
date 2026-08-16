@@ -14,7 +14,7 @@ public class GastoRepository {
 
     public Gasto salvar(Gasto g) {
         if (g.getId() == 0) {
-            String sql = "INSERT INTO gastos (tipo,descricao,periodo_mes,periodo_ano,fim_mes,fim_ano,valor,notas,parcelas_total,parcela_numero,grupo_parcela) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+            String sql = "INSERT INTO gastos (tipo,descricao,periodo_dia,periodo_mes,periodo_ano,fim_mes,fim_ano,valor,notas,parcelas_total,parcela_numero,grupo_parcela) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
             try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 bind(ps, g);
                 ps.executeUpdate();
@@ -22,10 +22,10 @@ public class GastoRepository {
                 if (rs.next()) g.setId(rs.getInt(1));
             } catch (SQLException e) { throw new RuntimeException(e); }
         } else {
-            String sql = "UPDATE gastos SET tipo=?,descricao=?,periodo_mes=?,periodo_ano=?,fim_mes=?,fim_ano=?,valor=?,notas=?,parcelas_total=?,parcela_numero=?,grupo_parcela=? WHERE id=?";
+            String sql = "UPDATE gastos SET tipo=?,descricao=?,periodo_dia=?,periodo_mes=?,periodo_ano=?,fim_mes=?,fim_ano=?,valor=?,notas=?,parcelas_total=?,parcela_numero=?,grupo_parcela=? WHERE id=?";
             try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
                 bind(ps, g);
-                ps.setInt(12, g.getId());
+                ps.setInt(13, g.getId());
                 ps.executeUpdate();
             } catch (SQLException e) { throw new RuntimeException(e); }
         }
@@ -35,15 +35,16 @@ public class GastoRepository {
     private void bind(PreparedStatement ps, Gasto g) throws SQLException {
         ps.setString(1, g.getTipo().name());
         ps.setString(2, g.getDescricao());
-        setNullableInt(ps, 3, g.getPeriodoMes());
-        setNullableInt(ps, 4, g.getPeriodoAno());
-        setNullableInt(ps, 5, g.getFimMes());
-        setNullableInt(ps, 6, g.getFimAno());
-        ps.setDouble(7, g.getValor());
-        ps.setString(8, g.getNotas());
-        ps.setInt(9, g.getParcelasTotal());
-        ps.setInt(10, g.getParcelaNumero());
-        ps.setString(11, g.getGrupoParcela());
+        ps.setInt(3, g.getPeriodoDia());
+        setNullableInt(ps, 4, g.getPeriodoMes());
+        setNullableInt(ps, 5, g.getPeriodoAno());
+        setNullableInt(ps, 6, g.getFimMes());
+        setNullableInt(ps, 7, g.getFimAno());
+        ps.setDouble(8, g.getValor());
+        ps.setString(9, g.getNotas());
+        ps.setInt(10, g.getParcelasTotal());
+        ps.setInt(11, g.getParcelaNumero());
+        ps.setString(12, g.getGrupoParcela());
     }
 
     private void setNullableInt(PreparedStatement ps, int idx, Integer val) throws SQLException {
@@ -76,7 +77,7 @@ public class GastoRepository {
     }
 
     public List<Gasto> findAll() {
-        return query("SELECT * FROM gastos ORDER BY periodo_ano DESC, periodo_mes DESC");
+        return query("SELECT * FROM gastos ORDER BY periodo_ano DESC, periodo_mes DESC, periodo_dia DESC");
     }
 
     public List<Gasto> findByAno(int ano) {
@@ -93,7 +94,7 @@ public class GastoRepository {
     public List<Gasto> findByTipo(TipoGasto tipo) {
         String sql = tipo == TipoGasto.MENSALIDADE
                 ? "SELECT * FROM gastos WHERE tipo='MENSALIDADE' ORDER BY periodo_ano DESC, periodo_mes DESC, id DESC"
-                : "SELECT * FROM gastos WHERE tipo=? ORDER BY periodo_ano DESC, periodo_mes DESC, id DESC";
+                : "SELECT * FROM gastos WHERE tipo=? ORDER BY periodo_ano DESC, periodo_mes DESC, periodo_dia DESC, id DESC";
         List<Gasto> list = new ArrayList<>();
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             if (tipo != TipoGasto.MENSALIDADE) ps.setString(1, tipo.name());
@@ -157,6 +158,7 @@ public class GastoRepository {
         g.setId(rs.getInt("id"));
         g.setTipo(TipoGasto.valueOf(rs.getString("tipo")));
         g.setDescricao(rs.getString("descricao"));
+        g.setPeriodoDia(rs.getInt("periodo_dia"));
         g.setPeriodoMes(nullableInt(rs, "periodo_mes"));
         g.setPeriodoAno(nullableInt(rs, "periodo_ano"));
         g.setFimMes(nullableInt(rs, "fim_mes"));

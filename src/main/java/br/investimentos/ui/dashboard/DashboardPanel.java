@@ -136,9 +136,12 @@ public class DashboardPanel extends BorderPane {
         double dolarTotal = tiposFiltro.contains(TipoInvestimento.DOLAR) ? consolSvc.calcularDolarTotal(dolarBrl) : 0.0;
         double dolarInvestidoBrl = consolSvc.calcularDolarInvestidoBrl(anoSelecionado, dolarBrl);
         double ptaTotal = r.pta() + dolarTotal;
-        double vtiaTotal = r.vtia() + dolarInvestidoBrl;
+        // "Total Investido" (KPI): só o que entrou no período (RF usa SAM, sem VAI) — RV/Dólar já são assim.
+        double totalInvestidoAno = r.samRf() + r.viarv() + dolarInvestidoBrl;
+        // % Rendimento sobre Investido: continua dividindo pelo capital acumulado (mais realista).
+        double capitalAcumulado = r.vtia() + dolarInvestidoBrl;
         Double pcpaTotal = ptaTotal > 0 ? (r.vtra() / ptaTotal) * 100 : null;
-        Double pratTotal = vtiaTotal > 0 ? (r.vtra() / vtiaTotal) * 100 : null;
+        Double pratTotal = capitalAcumulado > 0 ? (r.vtra() / capitalAcumulado) * 100 : null;
         LocalDate hoje = LocalDate.now();
         double aporteMes = consolSvc.calcularAportesDoAno(anoSelecionado, tiposFiltro, dolarBrl);
 
@@ -154,7 +157,7 @@ public class DashboardPanel extends BorderPane {
         atualizarAlertas();
         contentBox.getChildren().add(alertBox);
         contentBox.getChildren().add(buildPillsBar(r, dolarTotal));
-        contentBox.getChildren().add(buildKpiGrid(r, aporteMes, ptaTotal, vtiaTotal));
+        contentBox.getChildren().add(buildKpiGrid(r, aporteMes, ptaTotal, totalInvestidoAno));
         contentBox.getChildren().add(buildGastosKpiRow(gt, gat, gdt, gmt));
 
         HBox rendRow = buildRendimentoCard(pcpaTotal, pratTotal, r.todosOsAnos());
@@ -206,14 +209,14 @@ public class DashboardPanel extends BorderPane {
 
     // ── 4 KPI cards ─────────────────────────────────────────────────────
 
-    private HBox buildKpiGrid(ConsolidacaoService.ResultadoConsolidado r, double aporteMes, double ptaTotal, double vtiaTotal) {
+    private HBox buildKpiGrid(ConsolidacaoService.ResultadoConsolidado r, double aporteMes, double ptaTotal, double totalInvestidoAno) {
         HBox row = new HBox(12);
 
         String gpStyle = r.vtra() >= 0 ? "positive" : "negative";
         String gpColor = r.vtra() >= 0 ? "#3fb950" : "#f85149";
 
         VBox kpi1 = makeKpiCard("Patrimônio Total", FormatUtil.brl(ptaTotal), "PTA", "neutral", "#bc8cff");
-        VBox kpi2 = makeKpiCard("Total Investido", FormatUtil.brl(vtiaTotal), "VTIA", "neutral", "#58a6ff");
+        VBox kpi2 = makeKpiCard("Total Investido", FormatUtil.brl(totalInvestidoAno), "VTIA", "neutral", "#58a6ff");
         VBox kpi3 = makeKpiCard("Ganho / Perda", FormatUtil.brl(r.vtra()), "VTRA", gpStyle, gpColor);
         String aporteLabel = anoSelecionado == ConsolidacaoService.ANO_TODOS
                 ? "Aportado Total" : "Aportado " + anoSelecionado;

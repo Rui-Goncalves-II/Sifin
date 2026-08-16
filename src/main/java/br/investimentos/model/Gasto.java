@@ -6,6 +6,7 @@ public class Gasto {
     private int id;
     private TipoGasto tipo;
     private String descricao;
+    private int periodoDia = 1;
     private Integer periodoMes;
     private Integer periodoAno;
     private Integer fimMes;
@@ -36,6 +37,8 @@ public class Gasto {
     public void setTipo(TipoGasto tipo) { this.tipo = tipo; }
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
+    public int getPeriodoDia() { return periodoDia; }
+    public void setPeriodoDia(int periodoDia) { this.periodoDia = periodoDia; }
     public Integer getPeriodoMes() { return periodoMes; }
     public void setPeriodoMes(Integer periodoMes) { this.periodoMes = periodoMes; }
     public Integer getPeriodoAno() { return periodoAno; }
