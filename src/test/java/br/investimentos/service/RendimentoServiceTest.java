@@ -33,41 +33,41 @@ class RendimentoServiceTest {
     @Test
     void calcularSam_soDepositos() {
         Movimentacao dep = mov(TipoMovimentacao.DEPOSITO, 1000.0);
-        when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 6)).thenReturn(List.of(dep));
+        when(movRepo.findByInvestimentoAnoMesDiaAte(1, 2025, 6, 31)).thenReturn(List.of(dep));
 
-        assertEquals(1000.0, svc.calcularSam(1, 2025, 6), 1e-10);
+        assertEquals(1000.0, svc.calcularSam(1, 2025, 6, 31), 1e-10);
     }
 
     @Test
     void calcularSam_depositoMenosSaque() {
         Movimentacao dep = mov(TipoMovimentacao.DEPOSITO, 2000.0);
         Movimentacao saq = mov(TipoMovimentacao.SAQUE, 500.0);
-        when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 6)).thenReturn(List.of(dep, saq));
+        when(movRepo.findByInvestimentoAnoMesDiaAte(1, 2025, 6, 31)).thenReturn(List.of(dep, saq));
 
-        assertEquals(1500.0, svc.calcularSam(1, 2025, 6), 1e-10);
+        assertEquals(1500.0, svc.calcularSam(1, 2025, 6, 31), 1e-10);
     }
 
     @Test
     void calcularSam_semMovimentacoes_retornaZero() {
-        when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 6)).thenReturn(List.of());
+        when(movRepo.findByInvestimentoAnoMesDiaAte(1, 2025, 6, 31)).thenReturn(List.of());
 
-        assertEquals(0.0, svc.calcularSam(1, 2025, 6), 1e-10);
+        assertEquals(0.0, svc.calcularSam(1, 2025, 6, 31), 1e-10);
     }
 
     @Test
     void calcularVi_vaiMaisSam() {
         when(vaiRepo.getVai(1, 2025)).thenReturn(5000.0);
-        when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 3)).thenReturn(
+        when(movRepo.findByInvestimentoAnoMesDiaAte(1, 2025, 3, 31)).thenReturn(
                 List.of(mov(TipoMovimentacao.DEPOSITO, 1000.0)));
 
-        assertEquals(6000.0, svc.calcularVi(1, 2025, 3), 1e-10);
+        assertEquals(6000.0, svc.calcularVi(1, 2025, 3, 31), 1e-10);
     }
 
     @Test
     void calcularR_vtaMensal_rendimentoPositivo() {
         VtaMensal vta = vtaMensal(1, 3, 2025, 6500.0);
         when(vaiRepo.getVai(1, 2025)).thenReturn(5000.0);
-        when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 3)).thenReturn(
+        when(movRepo.findByInvestimentoAnoMesDiaAte(1, 2025, 3, 31)).thenReturn(
                 List.of(mov(TipoMovimentacao.DEPOSITO, 1000.0)));
 
         // VI = 6000, VTA = 6500 → R = 500
@@ -78,7 +78,7 @@ class RendimentoServiceTest {
     void calcularR_vtaMensal_rendimentoNegativo() {
         VtaMensal vta = vtaMensal(1, 3, 2025, 5800.0);
         when(vaiRepo.getVai(1, 2025)).thenReturn(5000.0);
-        when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 3)).thenReturn(
+        when(movRepo.findByInvestimentoAnoMesDiaAte(1, 2025, 3, 31)).thenReturn(
                 List.of(mov(TipoMovimentacao.DEPOSITO, 1000.0)));
 
         // VI = 6000, VTA = 5800 → R = -200
@@ -97,7 +97,7 @@ class RendimentoServiceTest {
         VtaMensal vta = vtaMensal(1, 6, 2025, 10500.0);
         when(vtaRepo.findUltimoDoMes(1, 6, 2025)).thenReturn(Optional.of(vta));
         when(vaiRepo.getVai(1, 2025)).thenReturn(10000.0);
-        when(movRepo.findByInvestimentoAnoMesAte(1, 2025, 6)).thenReturn(List.of());
+        when(movRepo.findByInvestimentoAnoMesDiaAte(1, 2025, 6, 31)).thenReturn(List.of());
 
         assertEquals(500.0, svc.calcularR(1, 6, 2025), 1e-10);
     }
@@ -117,6 +117,7 @@ class RendimentoServiceTest {
         v.setInvestimentoId(invId);
         v.setPeriodoMes(mes);
         v.setPeriodoAno(ano);
+        v.setPeriodoDia(31);
         v.setVta(vta);
         return v;
     }
