@@ -34,4 +34,12 @@ mvn package -DskipTests -q
 echo [Sifin] Atualizado com sucesso!
 
 :launch
-java -Dapp.home="%~dp0" -Dfile.encoding=UTF-8 -jar "%~dp0target\sifin-1.0.0.jar"
+set "JAR="
+for /f "delims=" %%i in ('dir /b /o:-n "%~dp0target\sifin-*.jar" 2^>nul ^| findstr /v /i "original"') do (
+    if not defined JAR set "JAR=%%i"
+)
+if not defined JAR (
+    echo [Sifin] Nenhum jar encontrado em target\. Rode "mvn package" primeiro.
+    exit /b 1
+)
+java -Dapp.home="%~dp0" -Dfile.encoding=UTF-8 -jar "%~dp0target\!JAR!"

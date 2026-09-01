@@ -30,6 +30,13 @@ if command -v git &>/dev/null && git -C "$DIR" rev-parse --git-dir &>/dev/null 2
 fi
 
 # ── iniciar ───────────────────────────────────────────────────────────────────
+JAR=$(find "$DIR/target" -maxdepth 1 -name 'sifin-*.jar' ! -name '*original*' | sort -V | tail -n1)
+
+if [[ -z "$JAR" ]]; then
+    echo -e "${YELLOW}⚠${NC}  Nenhum jar encontrado em target/. Rode 'mvn package' primeiro."
+    exit 1
+fi
+
 java -Dapp.home="$DIR" \
      -Dfile.encoding=UTF-8 \
-     -jar "$DIR/target/sifin-1.0.0.jar"
+     -jar "$JAR"
