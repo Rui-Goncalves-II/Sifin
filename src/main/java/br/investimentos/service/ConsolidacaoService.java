@@ -384,7 +384,7 @@ public class ConsolidacaoService {
                 double rInc = (prev == null || prev.getPeriodoAno() != vta.getPeriodoAno())
                         ? rCumul : rCumul - rendimentoService.calcularR(prev);
                 prev = vta;
-                rm.put(vta.getPeriodoAno() * 100 + vta.getPeriodoMes(), rInc);
+                rm.merge(vta.getPeriodoAno() * 100 + vta.getPeriodoMes(), rInc, Double::sum);
             }
             rIncMap.put(e.getKey(), rm);
         }
