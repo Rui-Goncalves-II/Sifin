@@ -23,9 +23,9 @@ public class RendimentoService {
         this.vtaRepo = vtaRepo;
     }
 
-    /** SAM = Σ(DEPOSITO − SAQUE) do inicio do ano até o mês informado (inclusive). */
-    public double calcularSam(int investimentoId, int ano, int ateOMes) {
-        List<Movimentacao> movs = movRepo.findByInvestimentoAnoMesAte(investimentoId, ano, ateOMes);
+    /** SAM = Σ(DEPOSITO − SAQUE) do inicio do ano até a data informada (inclusive). */
+    public double calcularSam(int investimentoId, int ano, int ateOMes, int ateODia) {
+        List<Movimentacao> movs = movRepo.findByInvestimentoAnoMesDiaAte(investimentoId, ano, ateOMes, ateODia);
         double sam = 0;
         for (Movimentacao m : movs) {
             sam += m.getTipoMov() == TipoMovimentacao.DEPOSITO ? m.getValor() : -m.getValor();
@@ -33,25 +33,22 @@ public class RendimentoService {
         return sam;
     }
 
-    /** VI = VAI + SAM */
-    public double calcularVi(int investimentoId, int ano, int mes) {
+    /** VI = VAI + SAM, calculado até uma data (dia/mês) específica dentro do ano. */
+    public double calcularVi(int investimentoId, int ano, int mes, int dia) {
         double vai = vaiRepo.getVai(investimentoId, ano);
-        double sam = calcularSam(investimentoId, ano, mes);
+        double sam = calcularSam(investimentoId, ano, mes, dia);
         return vai + sam;
     }
 
     /** R = VTA − VI para uma entrada de VTA. Pode ser negativo. */
     public double calcularR(int investimentoId, int mes, int ano) {
         Optional<VtaMensal> opt = vtaRepo.findUltimoDoMes(investimentoId, mes, ano);
-        if (opt.isEmpty()) return 0;
-        double vta = opt.get().getVta();
-        double vi = calcularVi(investimentoId, ano, mes);
-        return vta - vi;
+        return opt.map(this::calcularR).orElse(0.0);
     }
 
     /** R a partir de um VtaMensal já carregado (evita consulta dupla). */
     public double calcularR(VtaMensal vta) {
-        double vi = calcularVi(vta.getInvestimentoId(), vta.getPeriodoAno(), vta.getPeriodoMes());
+        double vi = calcularVi(vta.getInvestimentoId(), vta.getPeriodoAno(), vta.getPeriodoMes(), vta.getPeriodoDia());
         return vta.getVta() - vi;
     }
 

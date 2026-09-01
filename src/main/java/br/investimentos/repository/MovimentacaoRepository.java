@@ -80,13 +80,16 @@ public class MovimentacaoRepository {
         return list;
     }
 
-    public List<Movimentacao> findByInvestimentoAnoMesAte(int investimentoId, int ano, int mes) {
-        String sql = "SELECT * FROM movimentacoes WHERE investimento_id=? AND periodo_ano=? AND periodo_mes<=? ORDER BY periodo_mes";
+    public List<Movimentacao> findByInvestimentoAnoMesDiaAte(int investimentoId, int ano, int mes, int dia) {
+        String sql = "SELECT * FROM movimentacoes WHERE investimento_id=? AND periodo_ano=? " +
+                "AND (periodo_mes<? OR (periodo_mes=? AND periodo_dia<=?)) ORDER BY periodo_mes, periodo_dia";
         List<Movimentacao> list = new ArrayList<>();
         try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, investimentoId);
             ps.setInt(2, ano);
             ps.setInt(3, mes);
+            ps.setInt(4, mes);
+            ps.setInt(5, dia);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) list.add(map(rs));
         } catch (SQLException e) { throw new RuntimeException(e); }

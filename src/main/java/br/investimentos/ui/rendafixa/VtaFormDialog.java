@@ -81,9 +81,10 @@ public class VtaFormDialog extends Dialog<Void> {
         // Preview ao digitar
         Runnable updatePreview = () -> {
             try {
+                int dia = fDia.getValue() != null ? fDia.getValue() : diaDefault;
                 int mes = fMes.getValue() != null ? fMes.getValue() : mesDefault;
                 int ano = Integer.parseInt(fAno.getText().strip());
-                double vi = rendSvc.calcularVi(inv.getId(), ano, mes);
+                double vi = rendSvc.calcularVi(inv.getId(), ano, mes, dia);
                 viLabel.setText("VI = " + FormatUtil.brl(vi));
                 if (!fVta.getText().isBlank()) {
                     double vta = InputUtil.parseDoubleField(fVta.getText());
@@ -94,6 +95,7 @@ public class VtaFormDialog extends Dialog<Void> {
             } catch (Exception ex) { /* input incompleto */ }
         };
         fVta.textProperty().addListener((o, a, b) -> updatePreview.run());
+        fDia.valueProperty().addListener((o, a, b) -> updatePreview.run());
         fMes.valueProperty().addListener((o, a, b) -> updatePreview.run());
         fAno.textProperty().addListener((o, a, b) -> updatePreview.run());
         updatePreview.run();

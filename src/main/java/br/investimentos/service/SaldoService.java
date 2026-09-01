@@ -50,7 +50,7 @@ public class SaldoService {
             return taxaService.taxaMensalExplicita(inv.getTaxaAnual());
         }
         double r = rendimentoService.calcularR(base);
-        double vi = rendimentoService.calcularVi(base.getInvestimentoId(), base.getPeriodoAno(), base.getPeriodoMes());
+        double vi = rendimentoService.calcularVi(base.getInvestimentoId(), base.getPeriodoAno(), base.getPeriodoMes(), base.getPeriodoDia());
         double ta = taxaService.taxaAcumulada(r, vi);
         return taxaService.taxaMensalAcumulada(ta, base.getPeriodoMes());
     }

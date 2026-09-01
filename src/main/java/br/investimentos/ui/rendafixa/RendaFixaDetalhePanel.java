@@ -134,7 +134,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
         if (anoSelecionado != ANO_TODOS) {
             int ateOMes = (anoSelecionado == anoAtual) ? mesAtual : 12;
             double vai = vaiRepo.getVai(inv.getId(), anoSelecionado);
-            double sam = rendSvc.calcularSam(inv.getId(), anoSelecionado, ateOMes);
+            double sam = rendSvc.calcularSam(inv.getId(), anoSelecionado, ateOMes, 31);
             double r = vtaRepo.findUltimoDoAno(inv.getId(), anoSelecionado)
                     .map(rendSvc::calcularR).orElse(0.0);
             String samLabel = (anoSelecionado == anoAtual)
@@ -209,7 +209,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
         cVi.setGraphic(colHeader("VI"));
         cVi.setCellValueFactory(c -> {
             VtaMensal v = c.getValue();
-            double viVal = rendSvc.calcularVi(v.getInvestimentoId(), v.getPeriodoAno(), v.getPeriodoMes());
+            double viVal = rendSvc.calcularVi(v.getInvestimentoId(), v.getPeriodoAno(), v.getPeriodoMes(), v.getPeriodoDia());
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.brl(viVal));
         });
         cVi.setPrefWidth(130);
@@ -239,7 +239,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
         TableColumn<VtaMensal, String> cTaxa = new TableColumn<>("Taxa Acum.");
         cTaxa.setCellValueFactory(c -> {
             VtaMensal v = c.getValue();
-            double viVal = rendSvc.calcularVi(v.getInvestimentoId(), v.getPeriodoAno(), v.getPeriodoMes());
+            double viVal = rendSvc.calcularVi(v.getInvestimentoId(), v.getPeriodoAno(), v.getPeriodoMes(), v.getPeriodoDia());
             double rVal = rendSvc.calcularR(v);
             double ta = taxaSvc.taxaAcumulada(rVal, viVal);
             return new javafx.beans.property.SimpleStringProperty(FormatUtil.pct(ta * 100));
