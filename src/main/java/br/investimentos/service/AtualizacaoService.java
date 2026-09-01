@@ -42,11 +42,24 @@ public class AtualizacaoService {
 
     /** Verifica assincronamente. Chama onAtualizacaoDisponivel(commitRemotoShort) se houver commit mais recente. */
     public void verificarAtualizacaoAsync(Consumer<String> onAtualizacaoDisponivel) {
+        verificarAtualizacaoAsync(onAtualizacaoDisponivel, () -> {}, erro -> {});
+    }
+
+    /**
+     * Verifica assincronamente, com retorno para todos os desfechos: atualização disponível,
+     * já atualizado, ou erro na verificação (usado pela checagem manual em Configurações).
+     */
+    public void verificarAtualizacaoAsync(Consumer<String> onAtualizacaoDisponivel,
+                                           Runnable onAtualizado,
+                                           Consumer<String> onErro) {
         CompletableFuture.runAsync(() -> {
             try {
                 String localHash = getCommitLocal();
                 commitLocalCache = localHash;
-                if (localHash == null) return;
+                if (localHash == null) {
+                    onErro.accept("Não foi possível determinar a versão local instalada.");
+                    return;
+                }
 
                 HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(8))
@@ -64,10 +77,14 @@ public class AtualizacaoService {
                     String remoteSha = extrairSha(response.body());
                     if (remoteSha != null && !remoteSha.equalsIgnoreCase(localHash)) {
                         onAtualizacaoDisponivel.accept(remoteSha.substring(0, 7));
+                    } else {
+                        onAtualizado.run();
                     }
+                } else {
+                    onErro.accept("GitHub respondeu com código " + response.statusCode() + ".");
                 }
-            } catch (Exception ignored) {
-                // sem rede — ignora silenciosamente
+            } catch (Exception e) {
+                onErro.accept("Não foi possível verificar (sem rede?): " + e.getMessage());
             }
         });
     }

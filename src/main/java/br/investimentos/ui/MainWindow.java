@@ -123,7 +123,7 @@ public class MainWindow {
     }
 
     private Node makeConfiguracoes() {
-        return new ConfiguracoesPanel(this::loadPanel, this::makeDashboard, rootLayer, configSvc, brapiSvc);
+        return new ConfiguracoesPanel(this::loadPanel, this::makeDashboard, rootLayer, configSvc, brapiSvc, stage);
     }
 
     private ImageView loadSidebarIcon(String resourcePath, int size) {

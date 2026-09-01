@@ -1,8 +1,10 @@
 package br.investimentos.ui.configuracoes;
 
 import br.investimentos.db.DatabaseManager;
+import br.investimentos.service.AtualizacaoService;
 import br.investimentos.service.BrapiService;
 import br.investimentos.service.ConfigService;
+import br.investimentos.ui.util.AtualizacaoDialog;
 import br.investimentos.ui.util.Toast;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -10,6 +12,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.Stage;
 
 import java.util.Optional;
 import java.util.concurrent.Executors;
@@ -21,7 +24,8 @@ public class ConfiguracoesPanel extends VBox {
                                Supplier<Node> makeDashboard,
                                StackPane rootLayer,
                                ConfigService configSvc,
-                               BrapiService brapiSvc) {
+                               BrapiService brapiSvc,
+                               Stage stage) {
         setSpacing(0);
         setStyle("-fx-background-color: #0d1117;");
 
@@ -53,11 +57,58 @@ public class ConfiguracoesPanel extends VBox {
         VBox cardBrapi = buildCardBrapi(rootLayer, configSvc, brapiSvc);
         cardBrapi.setMaxWidth(500);
 
-        VBox body = new VBox(24, cardBrapi, cardDados);
+        // Card de atualizações
+        VBox cardAtualizacoes = buildCardAtualizacoes(rootLayer, stage);
+        cardAtualizacoes.setMaxWidth(500);
+
+        VBox body = new VBox(24, cardBrapi, cardAtualizacoes, cardDados);
         body.setPadding(new Insets(28, 32, 28, 32));
         VBox.setVgrow(body, Priority.ALWAYS);
 
         getChildren().addAll(header, body);
+    }
+
+    private VBox buildCardAtualizacoes(StackPane rootLayer, Stage stage) {
+        Label sectionLabel = new Label("ATUALIZAÇÕES DO SISTEMA");
+        sectionLabel.getStyleClass().add("section-title");
+
+        Label desc = new Label(
+            "Verifica manualmente se há uma nova versão disponível no repositório do GitHub. "
+            + "Normalmente isso acontece automaticamente ao abrir o aplicativo, mas às vezes falha.");
+        desc.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 16px;");
+        desc.setWrapText(true);
+
+        Button btnVerificar = new Button("Verificar atualizações");
+        btnVerificar.getStyleClass().add("btn-secondary");
+        btnVerificar.setOnAction(e -> {
+            btnVerificar.setDisable(true);
+            btnVerificar.setText("Verificando...");
+
+            AtualizacaoService atualizacaoSvc = new AtualizacaoService();
+            atualizacaoSvc.verificarAtualizacaoAsync(
+                commitRemoto -> Platform.runLater(() -> {
+                    btnVerificar.setDisable(false);
+                    btnVerificar.setText("Verificar atualizações");
+                    String localCache = atualizacaoSvc.getCommitLocalCache();
+                    String localShort = localCache != null ? localCache.substring(0, 7) : "local";
+                    AtualizacaoDialog.show(stage, localShort, commitRemoto, AtualizacaoService.getReleaseUrl());
+                }),
+                () -> Platform.runLater(() -> {
+                    btnVerificar.setDisable(false);
+                    btnVerificar.setText("Verificar atualizações");
+                    Toast.show(rootLayer, "Tudo atualizado", "Você já está usando a versão mais recente.");
+                }),
+                erro -> Platform.runLater(() -> {
+                    btnVerificar.setDisable(false);
+                    btnVerificar.setText("Verificar atualizações");
+                    Toast.show(rootLayer, "Falha ao verificar", erro);
+                })
+            );
+        });
+
+        VBox card = new VBox(12, sectionLabel, desc, btnVerificar);
+        card.getStyleClass().add("card");
+        return card;
     }
 
     private VBox buildCardBrapi(StackPane rootLayer, ConfigService configSvc, BrapiService brapiSvc) {
