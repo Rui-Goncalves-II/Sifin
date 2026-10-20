@@ -37,6 +37,22 @@ if [[ -z "$JAR" ]]; then
     exit 1
 fi
 
+# ── escala da interface ─────────────────────────────────────────────────────────
+# No Hyprland (ex.: Omarchy) o GDK_SCALE costuma ser 2 com xwayland force_zero_scaling, e o
+# JavaFX renderiza em 2x mesmo num monitor com escala 1.5 — o layout fica espremido. Usa a
+# escala real do monitor focado. Pode ser sobrescrita com SIFIN_SCALE=1.25 ./run.sh
+SCALE="${SIFIN_SCALE:-}"
+if [[ -z "$SCALE" ]] && command -v hyprctl &>/dev/null; then
+    if command -v jq &>/dev/null; then
+        SCALE=$(hyprctl monitors -j 2>/dev/null | jq -r '(map(select(.focused)) + .)[0].scale // empty')
+    else
+        SCALE=$(hyprctl monitors 2>/dev/null | awk '/scale:/ {print $2; exit}')
+    fi
+fi
+JAVA_OPTS=()
+[[ "$SCALE" =~ ^[0-9]+([.][0-9]+)?$ ]] && JAVA_OPTS+=("-Dglass.gtk.uiScale=$SCALE")
+
 java -Dapp.home="$DIR" \
      -Dfile.encoding=UTF-8 \
+     "${JAVA_OPTS[@]}" \
      -jar "$JAR"

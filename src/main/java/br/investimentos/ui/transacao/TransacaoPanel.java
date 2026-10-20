@@ -5,7 +5,6 @@ import br.investimentos.model.Gasto;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.Movimentacao;
 import br.investimentos.model.enums.TipoGasto;
-import br.investimentos.db.DatabaseManager;
 import br.investimentos.repository.AporteRvRepository;
 import br.investimentos.repository.GastoRepository;
 import br.investimentos.repository.InvestimentoRepository;
@@ -181,8 +180,9 @@ public class TransacaoPanel extends BorderPane {
         if (aviso.showAndWait().filter(r -> r == ButtonType.OK).isEmpty()) return;
 
         try {
-            DatabaseManager.getInstance().limparBancoDados();
-            ImportExportService.ImportResult res = importExportSvc.importar(arquivo);
+            // valida o arquivo inteiro antes de apagar qualquer coisa
+            ImportExportService.DadosImportacao dados = importExportSvc.ler(arquivo);
+            ImportExportService.ImportResult res = importExportSvc.restaurar(dados);
             carregarDados();
             recarregarFiltroAno();
             aplicarFiltros();

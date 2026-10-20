@@ -21,6 +21,8 @@ import br.investimentos.ui.util.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import javafx.application.Platform;
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import br.investimentos.ui.util.UIUtil;
@@ -114,7 +116,8 @@ public class MainWindow {
     }
 
     private Node makeTransacoes() {
-        ImportExportService impExpSvc = new ImportExportService(invRepo, movRepo, vtaRepo, vaiRepo, aporteRepo, vacRepo, gastoRepo);
+        ImportExportService impExpSvc = new ImportExportService(invRepo, movRepo, vtaRepo, vaiRepo, aporteRepo, vacRepo, gastoRepo,
+                new CotacaoRepository(), configSvc);
         return new TransacaoPanel(invRepo, movRepo, aporteRepo, gastoRepo, impExpSvc);
     }
 
@@ -150,14 +153,16 @@ public class MainWindow {
 
         rootLayer = new StackPane(root);
 
-        Scene scene = new Scene(rootLayer, 1280, 768);
+        // Não abre maior que a área útil da tela (ex.: 1280x800 lógicos num notebook com escala 1.5).
+        Rectangle2D tela = Screen.getPrimary().getVisualBounds();
+        Scene scene = new Scene(rootLayer, Math.min(1280, tela.getWidth()), Math.min(768, tela.getHeight()));
         scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
 
         stage.setTitle("Sifin — Painel de Investimentos");
         carregarIcones(stage);
         stage.setScene(scene);
-        stage.setMinWidth(800);
-        stage.setMinHeight(600);
+        stage.setMinWidth(640);
+        stage.setMinHeight(480);
         stage.show();
 
         var atualizacaoSvc = new AtualizacaoService();

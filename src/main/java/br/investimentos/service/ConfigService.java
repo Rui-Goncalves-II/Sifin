@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class ConfigService {
@@ -29,6 +31,16 @@ public class ConfigService {
             ps.setString(2, valor);
             ps.executeUpdate();
         } catch (SQLException e) { throw new RuntimeException(e); }
+    }
+
+    public Map<String, String> findAll() {
+        Map<String, String> out = new LinkedHashMap<>();
+        String sql = "SELECT chave, valor FROM configuracoes ORDER BY chave";
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) out.put(rs.getString(1), rs.getString(2));
+        } catch (SQLException e) { throw new RuntimeException(e); }
+        return out;
     }
 
     public String getBrapiToken() {

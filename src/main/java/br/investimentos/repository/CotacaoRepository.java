@@ -4,6 +4,8 @@ import br.investimentos.db.DatabaseManager;
 import br.investimentos.model.CotacaoDolar;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class CotacaoRepository {
@@ -39,6 +41,16 @@ public class CotacaoRepository {
             if (rs.next()) return Optional.of(map(rs));
         } catch (SQLException e) { throw new RuntimeException(e); }
         return Optional.empty();
+    }
+
+    public List<CotacaoDolar> findAll() {
+        List<CotacaoDolar> list = new ArrayList<>();
+        String sql = "SELECT * FROM cotacoes_dolar ORDER BY data";
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) list.add(map(rs));
+        } catch (SQLException e) { throw new RuntimeException(e); }
+        return list;
     }
 
     private CotacaoDolar map(ResultSet rs) throws SQLException {

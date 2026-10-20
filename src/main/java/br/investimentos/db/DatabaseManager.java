@@ -16,9 +16,11 @@ public class DatabaseManager {
     private static DatabaseManager instance;
     private final String url;
 
+    private final File dataDir;
+
     private DatabaseManager() {
         String appHome = System.getProperty("app.home", System.getProperty("user.dir"));
-        File dataDir = new File(appHome, "data");
+        dataDir = new File(appHome, "data");
         dataDir.mkdirs();
         File dbFile = new File(dataDir, "investimentos.db");
         url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
@@ -161,6 +163,20 @@ public class DatabaseManager {
         } catch (Exception e) {
             throw new RuntimeException("Migration failed: gastos periodo nullable", e);
         }
+    }
+
+    /** Cópia consistente do banco (inclui o conteúdo do WAL) em data/investimentos-backup-<timestamp>.db. */
+    public File criarBackup() {
+        String ts = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        File destino = new File(dataDir, "investimentos-backup-" + ts + ".db");
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement st = conn.createStatement()) {
+            st.execute("VACUUM INTO '" + destino.getAbsolutePath().replace("'", "''") + "'");
+        } catch (SQLException e) {
+            throw new RuntimeException("Falha ao criar backup do banco", e);
+        }
+        return destino;
     }
 
     public void limparBancoDados() {
