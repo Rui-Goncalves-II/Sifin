@@ -8,6 +8,7 @@ import br.investimentos.service.BrapiService;
 import br.investimentos.ui.util.FormatUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import br.investimentos.ui.util.UIUtil;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -39,7 +40,7 @@ public class RendaVariavelListPanel extends BorderPane {
         HBox header = new HBox(12);
         header.getStyleClass().add("dash-header");
         header.setAlignment(Pos.CENTER_LEFT);
-        Label title = new Label("💹 Renda Variável");
+        Label title = new Label("Renda Variável", UIUtil.svgIcon(UIUtil.ICON_RENDA_VARIAVEL, 22));
         title.getStyleClass().add("page-title");
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
 

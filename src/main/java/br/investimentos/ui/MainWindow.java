@@ -84,9 +84,9 @@ public class MainWindow {
 
         sidebar = new SideBar();
 
-        sidebar.addItem(new SideBar.NavItem("🏠", "Dashboard", () -> loadPanel(makeDashboard())));
+        sidebar.addItem(new SideBar.NavItem(null, UIUtil.svgIcon(UIUtil.ICON_DASHBOARD, 22), "Dashboard", () -> loadPanel(makeDashboard()), false));
         sidebar.addItem(new SideBar.NavItem(null, loadSidebarIcon("/icons/renda-passiva.png", 22), "Renda Fixa", () -> loadPanel(makeRendaFixa()), false));
-        sidebar.addItem(new SideBar.NavItem("💹", "Renda Variável", () -> loadPanel(makeRendaVariavel())));
+        sidebar.addItem(new SideBar.NavItem(null, UIUtil.svgIcon(UIUtil.ICON_RENDA_VARIAVEL, 22), "Renda Variável", () -> loadPanel(makeRendaVariavel()), false));
         sidebar.addItem(new SideBar.NavItem("$", "Dólar", () -> loadPanel(makeDolar())));
         sidebar.addItem(new SideBar.NavItem(null, loadSidebarIcon("/icons/dinheiro.png", 22), "Gastos", () -> loadPanel(makeGastos()), false));
         sidebar.addItem(new SideBar.NavItem("⇄", "Transações", () -> loadPanel(makeTransacoes())));

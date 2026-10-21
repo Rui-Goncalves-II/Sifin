@@ -11,6 +11,7 @@ import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.GlossarioTooltip;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import br.investimentos.ui.util.UIUtil;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -140,7 +141,7 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         Button btnVoltar = new Button("← Voltar");
         btnVoltar.getStyleClass().add("btn-secondary");
         btnVoltar.setOnAction(e -> navigate.accept(new RendaVariavelListPanel(invRepo, aporteRepo, vacRepo, rvSvc, cotacaoSvc, brapiSvc, navigate)));
-        Label title = new Label("💹 " + inv.getNome());
+        Label title = new Label(inv.getNome(), UIUtil.svgIcon(UIUtil.ICON_RENDA_VARIAVEL, 22));
         title.getStyleClass().add("page-title");
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
         Button btnBrapi = new Button("Buscar via BRAPI");

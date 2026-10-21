@@ -183,7 +183,7 @@ public class DashboardPanel extends BorderPane {
             makePillToggle(loadIcon("/icons/renda-passiva.png", 14),
                     "Renda Fixa   " + FormatUtil.brl(r.vtarf()),
                     "pill-rf", TipoInvestimento.RENDA_FIXA),
-            makePillToggle(null, "💹  Renda Variável   " + FormatUtil.brl(r.vtarv()),
+            makePillToggle(UIUtil.svgIcon(UIUtil.ICON_RENDA_VARIAVEL, 14), "Renda Variável   " + FormatUtil.brl(r.vtarv()),
                     "pill-rv", TipoInvestimento.RENDA_VARIAVEL),
             makePillToggle(null, "$  Dólar   " + FormatUtil.brl(dolarTotal),
                     "pill-usd", TipoInvestimento.DOLAR)
@@ -526,7 +526,7 @@ public class DashboardPanel extends BorderPane {
         }
 
         if (tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL)) {
-            VBox card = makeMiniCard("💹", "Renda Variável", FormatUtil.brl(r.parv()),
+            VBox card = makeMiniCard(UIUtil.svgIcon(UIUtil.ICON_RENDA_VARIAVEL, 20), "Renda Variável", FormatUtil.brl(r.parv()),
                     "Dividendos: " + FormatUtil.brl(r.dta()), "badge-rv");
             card.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(card, Priority.ALWAYS);
@@ -545,17 +545,21 @@ public class DashboardPanel extends BorderPane {
     }
 
     private VBox makeMiniCard(String icon, String label, String total, String subtext, String badgeStyle) {
+        Label iconLbl = new Label(icon);
+        iconLbl.setStyle("-fx-font-size: 20px;");
+        return makeMiniCard(iconLbl, label, total, subtext, badgeStyle);
+    }
+
+    private VBox makeMiniCard(Node iconNode, String label, String total, String subtext, String badgeStyle) {
         VBox card = new VBox(10);
         card.getStyleClass().add("card");
 
         HBox hdr = new HBox(8);
         hdr.setAlignment(Pos.CENTER_LEFT);
-        Label iconLbl = new Label(icon);
-        iconLbl.setStyle("-fx-font-size: 20px;");
         Label typeLbl = new Label(label);
         typeLbl.getStyleClass().add(badgeStyle);
         GlossarioTooltip.aplicar(typeLbl, label);
-        hdr.getChildren().addAll(iconLbl, typeLbl);
+        hdr.getChildren().addAll(iconNode, typeLbl);
 
         Label totalLbl = new Label(total);
         totalLbl.getStyleClass().add("card-value-sm");
