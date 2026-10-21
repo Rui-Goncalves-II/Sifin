@@ -63,6 +63,33 @@ public class DatabaseManager {
         }
         migrateGastosPeriodoNullable();
         migrateVtaMensalPeriodoDia();
+        normalizarPeriodoDia();
+    }
+
+    /**
+     * Imports antigos gravavam periodo_dia = 0. Move esses registros para o dia 1;
+     * se já houver um VTA no dia 1 do mesmo mês, ele prevalece sobre o de dia 0.
+     */
+    private void normalizarPeriodoDia() {
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement st = conn.createStatement()) {
+            conn.setAutoCommit(false);
+            try {
+                for (String tabela : new String[]{"movimentacoes", "aportes_rv", "gastos"}) {
+                    st.execute("UPDATE " + tabela + " SET periodo_dia=1 WHERE periodo_dia IS NULL OR periodo_dia<1");
+                }
+                st.execute("UPDATE OR IGNORE vta_mensal SET periodo_dia=1 WHERE periodo_dia<1");
+                st.execute("DELETE FROM vta_mensal WHERE periodo_dia<1");
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Migration failed: normalizar periodo_dia", e);
+        }
     }
 
     private void migrateVtaMensalPeriodoDia() {

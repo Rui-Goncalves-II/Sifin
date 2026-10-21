@@ -389,9 +389,9 @@ public class ImportExportService {
     private static String s(String v) { return v == null ? "" : v; }
     private static String d(Double v) { return v == null ? "" : String.valueOf(v); }
 
-    /** CSVs exportados antes da coluna periodo_dia assumem dia 1. */
+    /** CSVs exportados antes da coluna periodo_dia (ou com dia 0) assumem dia 1. */
     private static int dia(String[] row) {
-        return row.length > COL_DIA && !row[COL_DIA].isEmpty() ? Integer.parseInt(row[COL_DIA]) : 1;
+        return row.length > COL_DIA && !row[COL_DIA].isEmpty() ? Math.max(1, Integer.parseInt(row[COL_DIA])) : 1;
     }
 
     private static String csvLine(String[] fields) {

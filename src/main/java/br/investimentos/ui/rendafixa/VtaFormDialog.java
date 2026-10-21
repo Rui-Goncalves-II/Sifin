@@ -31,7 +31,7 @@ public class VtaFormDialog extends Dialog<Void> {
         initModality(Modality.APPLICATION_MODAL);
 
         LocalDate hoje = LocalDate.now();
-        int diaDefault = preFill != null ? preFill.getPeriodoDia() : hoje.getDayOfMonth();
+        int diaDefault = preFill != null && preFill.getPeriodoDia() > 0 ? preFill.getPeriodoDia() : hoje.getDayOfMonth();
         int mesDefault = preFill != null ? preFill.getPeriodoMes() : hoje.getMonthValue();
         int anoDefault = preFill != null ? preFill.getPeriodoAno() : hoje.getYear();
 

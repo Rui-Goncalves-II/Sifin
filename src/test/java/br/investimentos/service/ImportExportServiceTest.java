@@ -134,6 +134,26 @@ class ImportExportServiceTest {
     }
 
     @Test
+    void importar_csvComDiaZero_assumeDiaUm() throws Exception {
+        String header = "record_type,nome_ativo,tipo_ativo,subtipo,indexador,taxa_anual,data_vencimento,moeda," +
+                "ativo,notas_ativo,periodo_mes,periodo_ano,tipo_mov,valor,cotacao_dolar,notas," +
+                "tipo_op,quantidade,preco_por_cota,vta,vac,fonte_vac,ano_vai,vai," +
+                "gasto_tipo,gasto_descricao,gasto_fim_mes,gasto_fim_ano,gasto_parcelas_total,gasto_parcela_numero,gasto_grupo_parcela," +
+                "periodo_dia";
+        String inv = "INVESTIMENTO,CDB Zero,RENDA_FIXA,,,,,BRL,1,,,,,,,,,,,,,,,,,,,,,,,";
+        String mov = "MOVIMENTACAO,CDB Zero,,,,,,,,,9,2026,DEPOSITO,200.0,,,,,,,,,,,,,,,,,,0";
+        String vta = "VTA_MENSAL,CDB Zero,,,,,,,,,9,2026,,,,,,,,210.0,,,,,,,,,,,,0";
+        File csv = home.resolve("dia-zero.csv").toFile();
+        Files.writeString(csv.toPath(), String.join("\r\n", header, inv, mov, vta) + "\r\n", StandardCharsets.UTF_8);
+
+        svc.importar(csv);
+
+        int id = invRepo.findAllInclArquivados().get(0).getId();
+        assertEquals(1, movRepo.findByInvestimento(id).get(0).getPeriodoDia());
+        assertEquals(1, vtaRepo.findByInvestimento(id).get(0).getPeriodoDia());
+    }
+
+    @Test
     void ler_registroInvalido_naoTocaNoBanco() throws Exception {
         Investimento inv = new Investimento();
         inv.setNome("Existente");
