@@ -19,6 +19,8 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class AtualizacaoDialog {
@@ -183,10 +185,14 @@ public class AtualizacaoDialog {
             if (jar == null) return;
 
             String javaExe = ProcessHandle.current().info().command().orElse("java");
-            new ProcessBuilder(javaExe,
+            List<String> cmd = new ArrayList<>(List.of(javaExe,
                     "-Dapp.home=" + appHome,
-                    "-Dfile.encoding=UTF-8",
-                    "-jar", jar.toString())
+                    "-Dfile.encoding=UTF-8"));
+            // Mantém a escala definida pelo run.sh (Hyprland/Omarchy); sem ela o layout fica espremido.
+            String uiScale = System.getProperty("glass.gtk.uiScale");
+            if (uiScale != null) cmd.add("-Dglass.gtk.uiScale=" + uiScale);
+            cmd.addAll(List.of("-jar", jar.toString()));
+            new ProcessBuilder(cmd)
                 .directory(Paths.get(appHome).toFile())
                 .start();
 
