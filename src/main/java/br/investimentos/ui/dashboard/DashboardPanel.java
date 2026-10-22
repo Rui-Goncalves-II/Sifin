@@ -53,6 +53,7 @@ public class DashboardPanel extends BorderPane {
     private VBox contentBox;
     private int anoSelecionado;
     private boolean graficoAportesVisivel = false;
+    private boolean graficoGastosVisivel = false;
     private final Set<TipoInvestimento> tiposFiltro = EnumSet.allOf(TipoInvestimento.class);
 
     public DashboardPanel(InvestimentoRepository invRepo,
@@ -167,7 +168,6 @@ public class DashboardPanel extends BorderPane {
         contentBox.getChildren().add(buildMiniTypeCards(r, dolarTotal));
         contentBox.getChildren().add(buildCharts(r, dolarTotal));
         contentBox.getChildren().add(buildPatrimonioChart(dolarBrl));
-        if (!gastosPorMes.isEmpty()) contentBox.getChildren().add(buildGastosChart(gastosPorMes));
         contentBox.getChildren().add(buildExtratoTable(dolarBrl));
         contentBox.getChildren().add(buildAportesPorTipoCard(
                 consolSvc.calcularAportesPorMesPorTipo(anoSelecionado, tiposFiltro, dolarBrl)));
@@ -733,37 +733,9 @@ public class DashboardPanel extends BorderPane {
             table.setMinHeight(12 * rowH + headerH);
         }
 
-        Label titleLbl = new Label("Aporte Líquido por Tipo");
-        titleLbl.getStyleClass().add("section-title");
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        // Gráfico só é montado quando o toggle está ligado, para não poluir nem pesar o dashboard
-        StackPane chartHolder = new StackPane();
-        Runnable aplicarVisibilidade = () -> {
-            boolean mostrar = graficoAportesVisivel && !dados.isEmpty();
-            if (mostrar && chartHolder.getChildren().isEmpty())
-                chartHolder.getChildren().add(buildAportesPorTipoChart(dados));
-            chartHolder.setVisible(mostrar);
-            chartHolder.setManaged(mostrar);
-        };
-
-        ToggleButton toggle = new ToggleButton("Gráfico");
-        toggle.getStyleClass().addAll("pill-btn", "pill-chart");
-        toggle.setSelected(graficoAportesVisivel);
-        toggle.setDisable(dados.isEmpty());
-        toggle.setOnAction(e -> {
-            graficoAportesVisivel = toggle.isSelected();
-            aplicarVisibilidade.run();
-        });
-        aplicarVisibilidade.run();
-
-        HBox hdr = new HBox(8, titleLbl, spacer, toggle);
-        hdr.setAlignment(Pos.CENTER_LEFT);
-
-        VBox box = new VBox(8, hdr, chartHolder, table);
-        box.getStyleClass().add("card");
-        return box;
+        return makeTabelaGraficoCard("Aporte Líquido por Tipo", table, dados.isEmpty(),
+                () -> buildAportesPorTipoChart(dados),
+                () -> graficoAportesVisivel, v -> graficoAportesVisivel = v);
     }
 
     private TableColumn<ConsolidacaoService.AporteMensalPorTipo, String> makeAporteCol(
@@ -858,10 +830,7 @@ public class DashboardPanel extends BorderPane {
             node.setContent(cp);
         });
 
-        StackPane wrapper = new StackPane(node);
-        wrapper.setPrefHeight(240);
-        wrapper.setMinHeight(240);
-        return wrapper;
+        return new StackPane(node);
     }
 
     // ── Patrimônio por mês (scatter/linha) ──────────────────────────────
@@ -956,7 +925,7 @@ public class DashboardPanel extends BorderPane {
         return row;
     }
 
-    private VBox buildGastosChart(List<ResumoMensal> dados) {
+    private StackPane buildGastosChart(List<ResumoMensal> dados) {
         java.awt.Color bgCard  = new java.awt.Color(0x16, 0x1b, 0x22);
         java.awt.Color border  = new java.awt.Color(0x2a, 0x34, 0x41);
         java.awt.Color textMut = new java.awt.Color(0x7d, 0x8f, 0xa0);
@@ -1033,13 +1002,7 @@ public class DashboardPanel extends BorderPane {
             node.setContent(cp);
         });
 
-        StackPane wrapper = new StackPane(node);
-        wrapper.setPrefHeight(240);
-
-        VBox box = new VBox(wrapper);
-        box.getStyleClass().add("card");
-        box.setPadding(Insets.EMPTY);
-        return box;
+        return new StackPane(node);
     }
 
     private VBox buildGastosTable(List<ResumoMensal> dados) {
@@ -1096,14 +1059,58 @@ public class DashboardPanel extends BorderPane {
             table.setMinHeight(12 * rowH + headerH);
         }
 
-        Label titleLbl = new Label("Gastos por Mês");
-        titleLbl.getStyleClass().add("section-title");
-        VBox box = new VBox(8, titleLbl, table);
-        box.getStyleClass().add("card");
-        return box;
+        return makeTabelaGraficoCard("Gastos por Mês", table, dados.isEmpty(),
+                () -> buildGastosChart(dados),
+                () -> graficoGastosVisivel, v -> graficoGastosVisivel = v);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
+
+    /**
+     * Card com título e um toggle "Gráfico" que alterna entre a tabela e o gráfico (nunca os dois).
+     * O gráfico só é montado na primeira vez que é exibido; o estado do toggle sobrevive ao refresh().
+     */
+    private VBox makeTabelaGraficoCard(String titulo, TableView<?> table, boolean semDados,
+                                       java.util.function.Supplier<Node> chartFactory,
+                                       java.util.function.BooleanSupplier graficoAtivo,
+                                       Consumer<Boolean> setGraficoAtivo) {
+        Label titleLbl = new Label(titulo);
+        titleLbl.getStyleClass().add("section-title");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        // mesma altura da tabela, para o card não "pular" ao alternar
+        StackPane chartHolder = new StackPane();
+        chartHolder.setPrefHeight(table.getPrefHeight());
+        chartHolder.setMinHeight(table.getPrefHeight());
+
+        Runnable aplicar = () -> {
+            boolean grafico = graficoAtivo.getAsBoolean() && !semDados;
+            if (grafico && chartHolder.getChildren().isEmpty())
+                chartHolder.getChildren().add(chartFactory.get());
+            chartHolder.setVisible(grafico);
+            chartHolder.setManaged(grafico);
+            table.setVisible(!grafico);
+            table.setManaged(!grafico);
+        };
+
+        ToggleButton toggle = new ToggleButton("Gráfico");
+        toggle.getStyleClass().addAll("pill-btn", "pill-chart");
+        toggle.setSelected(graficoAtivo.getAsBoolean());
+        toggle.setDisable(semDados);
+        toggle.setOnAction(e -> {
+            setGraficoAtivo.accept(toggle.isSelected());
+            aplicar.run();
+        });
+        aplicar.run();
+
+        HBox hdr = new HBox(8, titleLbl, spacer, toggle);
+        hdr.setAlignment(Pos.CENTER_LEFT);
+
+        VBox box = new VBox(8, hdr, chartHolder, table);
+        box.getStyleClass().add("card");
+        return box;
+    }
 
     private void atualizarAlertas() {
         alertBox.getChildren().clear();
