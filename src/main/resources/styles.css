@@ -183,6 +183,8 @@
 .pill-rf.active  { -fx-background-color: #1a2d1a; -fx-text-fill: #3fb950; -fx-border-color: #3fb950; }
 .pill-rv.active  { -fx-background-color: #1c2c40; -fx-text-fill: #58a6ff; -fx-border-color: #58a6ff; }
 .pill-usd.active { -fx-background-color: #2d2510; -fx-text-fill: #e3b341; -fx-border-color: #e3b341; }
+.pill-chart { -fx-font-size: 13px; -fx-padding: 3 12; }
+.pill-chart:selected { -fx-background-color: #251c38; -fx-text-fill: #bc8cff; -fx-border-color: #bc8cff; }
 
 /* ── USD badge ────────────────────────────────────────────────────── */
 .usd-badge {

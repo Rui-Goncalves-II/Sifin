@@ -52,6 +52,7 @@ public class DashboardPanel extends BorderPane {
     private VBox alertBox;
     private VBox contentBox;
     private int anoSelecionado;
+    private boolean graficoAportesVisivel = false;
     private final Set<TipoInvestimento> tiposFiltro = EnumSet.allOf(TipoInvestimento.class);
 
     public DashboardPanel(InvestimentoRepository invRepo,
@@ -168,6 +169,8 @@ public class DashboardPanel extends BorderPane {
         contentBox.getChildren().add(buildPatrimonioChart(dolarBrl));
         if (!gastosPorMes.isEmpty()) contentBox.getChildren().add(buildGastosChart(gastosPorMes));
         contentBox.getChildren().add(buildExtratoTable(dolarBrl));
+        contentBox.getChildren().add(buildAportesPorTipoCard(
+                consolSvc.calcularAportesPorMesPorTipo(anoSelecionado, tiposFiltro, dolarBrl)));
         contentBox.getChildren().add(buildGastosTable(gastosPorMes));
         contentBox.getChildren().add(buildAssetsCard(ptaTotal, dolarBrl));
     }
@@ -695,6 +698,170 @@ public class DashboardPanel extends BorderPane {
         VBox box = new VBox(8, titleLbl, table);
         box.getStyleClass().add("card");
         return box;
+    }
+
+    // ── Aporte líquido por tipo (tabela + gráfico opcional) ─────────────
+
+    private VBox buildAportesPorTipoCard(List<ConsolidacaoService.AporteMensalPorTipo> dados) {
+        TableView<ConsolidacaoService.AporteMensalPorTipo> table = new TableView<>();
+        table.getStyleClass().add("table-view");
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setPlaceholder(new Label("Sem movimentações no período selecionado"));
+
+        TableColumn<ConsolidacaoService.AporteMensalPorTipo, String> colData = new TableColumn<>("Data");
+        colData.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.mesAno(c.getValue().mes(), c.getValue().ano())));
+        colData.setMinWidth(colW("Data", 90));
+        colData.setPrefWidth(100);
+        table.getColumns().add(colData);
+
+        if (tiposFiltro.contains(TipoInvestimento.RENDA_FIXA))
+            table.getColumns().add(makeAporteCol("Renda Fixa", ConsolidacaoService.AporteMensalPorTipo::rf, false));
+        if (tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL))
+            table.getColumns().add(makeAporteCol("Renda Variável", ConsolidacaoService.AporteMensalPorTipo::rv, false));
+        if (tiposFiltro.contains(TipoInvestimento.DOLAR))
+            table.getColumns().add(makeAporteCol("Dólar", ConsolidacaoService.AporteMensalPorTipo::dolar, false));
+        table.getColumns().add(makeAporteCol("Total", ConsolidacaoService.AporteMensalPorTipo::total, true));
+
+        table.getItems().addAll(dados);
+
+        int rowH = 32, headerH = 30;
+        if (anoSelecionado == ConsolidacaoService.ANO_TODOS) {
+            table.setPrefHeight(10 * rowH + headerH);
+        } else {
+            table.setPrefHeight(12 * rowH + headerH);
+            table.setMinHeight(12 * rowH + headerH);
+        }
+
+        Label titleLbl = new Label("Aporte Líquido por Tipo");
+        titleLbl.getStyleClass().add("section-title");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        // Gráfico só é montado quando o toggle está ligado, para não poluir nem pesar o dashboard
+        StackPane chartHolder = new StackPane();
+        Runnable aplicarVisibilidade = () -> {
+            boolean mostrar = graficoAportesVisivel && !dados.isEmpty();
+            if (mostrar && chartHolder.getChildren().isEmpty())
+                chartHolder.getChildren().add(buildAportesPorTipoChart(dados));
+            chartHolder.setVisible(mostrar);
+            chartHolder.setManaged(mostrar);
+        };
+
+        ToggleButton toggle = new ToggleButton("Gráfico");
+        toggle.getStyleClass().addAll("pill-btn", "pill-chart");
+        toggle.setSelected(graficoAportesVisivel);
+        toggle.setDisable(dados.isEmpty());
+        toggle.setOnAction(e -> {
+            graficoAportesVisivel = toggle.isSelected();
+            aplicarVisibilidade.run();
+        });
+        aplicarVisibilidade.run();
+
+        HBox hdr = new HBox(8, titleLbl, spacer, toggle);
+        hdr.setAlignment(Pos.CENTER_LEFT);
+
+        VBox box = new VBox(8, hdr, chartHolder, table);
+        box.getStyleClass().add("card");
+        return box;
+    }
+
+    private TableColumn<ConsolidacaoService.AporteMensalPorTipo, String> makeAporteCol(
+            String header, java.util.function.ToDoubleFunction<ConsolidacaoService.AporteMensalPorTipo> valor, boolean bold) {
+        TableColumn<ConsolidacaoService.AporteMensalPorTipo, String> col = new TableColumn<>(header);
+        col.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                FormatUtil.brl(valor.applyAsDouble(c.getValue()))));
+        col.setCellFactory(cf -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setStyle(""); return; }
+                setText(item);
+                String style = "-fx-alignment: CENTER-RIGHT;" + (bold ? " -fx-font-weight: bold;" : "");
+                int idx = getIndex();
+                if (idx >= 0 && idx < getTableView().getItems().size()) {
+                    double v = valor.applyAsDouble(getTableView().getItems().get(idx));
+                    if (v > 0.005) style += " -fx-text-fill: #3fb950;";
+                    else if (v < -0.005) style += " -fx-text-fill: #f85149;";
+                }
+                setStyle(style);
+            }
+        });
+        col.setMinWidth(colW(header, 120));
+        return col;
+    }
+
+    private StackPane buildAportesPorTipoChart(List<ConsolidacaoService.AporteMensalPorTipo> dados) {
+        java.awt.Color bgCard  = new java.awt.Color(0x16, 0x1b, 0x22);
+        java.awt.Color border  = new java.awt.Color(0x2a, 0x34, 0x41);
+        java.awt.Color textMut = new java.awt.Color(0x7d, 0x8f, 0xa0);
+        java.awt.Color green   = new java.awt.Color(0x3f, 0xb9, 0x50);
+        java.awt.Color blue    = new java.awt.Color(0x58, 0xa6, 0xff);
+        java.awt.Color amber   = new java.awt.Color(0xe3, 0xb3, 0x41);
+        java.awt.Font  fontXs  = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10);
+        java.awt.Font  fontSm  = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 11);
+        java.awt.Font  fontBold= new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12);
+
+        DefaultCategoryDataset ds = new DefaultCategoryDataset();
+        java.util.List<java.awt.Color> colors = new java.util.ArrayList<>();
+        if (tiposFiltro.contains(TipoInvestimento.RENDA_FIXA)) colors.add(green);
+        if (tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL)) colors.add(blue);
+        if (tiposFiltro.contains(TipoInvestimento.DOLAR)) colors.add(amber);
+        for (ConsolidacaoService.AporteMensalPorTipo a : dados) {
+            String lbl = FormatUtil.mesAno(a.mes(), a.ano());
+            if (tiposFiltro.contains(TipoInvestimento.RENDA_FIXA))     ds.addValue(a.rf(),    "Renda Fixa",     lbl);
+            if (tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL)) ds.addValue(a.rv(),    "Renda Variável", lbl);
+            if (tiposFiltro.contains(TipoInvestimento.DOLAR))          ds.addValue(a.dolar(), "Dólar",          lbl);
+        }
+
+        org.jfree.chart.axis.CategoryAxis xAxis = new org.jfree.chart.axis.CategoryAxis(null);
+        xAxis.setTickLabelPaint(textMut); xAxis.setTickLabelFont(fontXs);
+        xAxis.setAxisLinePaint(border);   xAxis.setTickMarkPaint(border);
+
+        org.jfree.chart.axis.NumberAxis yAxis = new org.jfree.chart.axis.NumberAxis("R$");
+        yAxis.setTickLabelPaint(textMut); yAxis.setTickLabelFont(fontXs);
+        yAxis.setAxisLinePaint(border);   yAxis.setTickMarkPaint(border);
+        yAxis.setLabelPaint(textMut);     yAxis.setLabelFont(fontSm);
+        yAxis.setAutoRangeIncludesZero(true);
+
+        org.jfree.chart.renderer.category.BarRenderer renderer = new org.jfree.chart.renderer.category.BarRenderer();
+        renderer.setBarPainter(new org.jfree.chart.renderer.category.StandardBarPainter());
+        renderer.setShadowVisible(false);
+        renderer.setDrawBarOutline(false);
+        renderer.setItemMargin(0.05);
+        for (int i = 0; i < colors.size(); i++) renderer.setSeriesPaint(i, colors.get(i));
+
+        org.jfree.chart.plot.CategoryPlot plot = new org.jfree.chart.plot.CategoryPlot(ds, xAxis, yAxis, renderer);
+        plot.setBackgroundPaint(bgCard);
+        plot.setOutlinePaint(border);
+        plot.setRangeGridlinePaint(border);
+        plot.setDomainGridlinesVisible(false);
+        plot.setRangeZeroBaselinePaint(textMut);
+        plot.setRangeZeroBaselineVisible(true);
+
+        JFreeChart chart = new JFreeChart("Aporte Líquido por Mês", fontBold, plot, true);
+        chart.setBackgroundPaint(bgCard);
+        chart.setBorderVisible(false);
+        chart.getTitle().setPaint(textMut);
+        chart.getTitle().setFont(fontBold);
+
+        org.jfree.chart.title.LegendTitle legend = chart.getLegend();
+        if (legend != null) {
+            legend.setBackgroundPaint(bgCard);
+            legend.setItemPaint(textMut);
+            legend.setItemFont(fontSm);
+        }
+
+        SwingNode node = new SwingNode();
+        SwingUtilities.invokeLater(() -> {
+            ChartPanel cp = new ChartPanel(chart);
+            cp.setBackground(bgCard);
+            node.setContent(cp);
+        });
+
+        StackPane wrapper = new StackPane(node);
+        wrapper.setPrefHeight(240);
+        wrapper.setMinHeight(240);
+        return wrapper;
     }
 
     // ── Patrimônio por mês (scatter/linha) ──────────────────────────────

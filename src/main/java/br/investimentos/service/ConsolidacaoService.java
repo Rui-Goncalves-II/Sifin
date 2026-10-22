@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 public class ConsolidacaoService {
@@ -182,6 +183,43 @@ public class ConsolidacaoService {
             }
         }
         return total;
+    }
+
+    public record AporteMensalPorTipo(int mes, int ano, double rf, double rv, double dolar) {
+        public double total() { return rf + rv + dolar; }
+    }
+
+    /**
+     * Aporte líquido por mês e tipo: depósito/compra somam, saque/venda subtraem (pode ser negativo).
+     * Dividendos não entram. Dólar é convertido pela cotação da movimentação (fallback: cotação atual).
+     */
+    public List<AporteMensalPorTipo> calcularAportesPorMesPorTipo(int ano, Set<TipoInvestimento> tipos, double cotacaoDolar) {
+        boolean todos = (ano == ANO_TODOS);
+        TreeMap<Integer, double[]> porMes = new TreeMap<>();
+        for (Investimento inv : invRepo.findAll()) {
+            if (!tipos.contains(inv.getTipo())) continue;
+            if (inv.getTipo() == TipoInvestimento.RENDA_VARIAVEL) {
+                var aportes = todos ? aporteRepo.findByInvestimento(inv.getId())
+                                    : aporteRepo.findByInvestimentoEAno(inv.getId(), ano);
+                for (var a : aportes) {
+                    if (a.getTipoOp() == TipoOperacaoRv.DIVIDENDO) continue;
+                    double delta = a.getTipoOp() == TipoOperacaoRv.COMPRA ? a.getValor() : -a.getValor();
+                    porMes.computeIfAbsent(a.getPeriodoAno() * 100 + a.getPeriodoMes(), k -> new double[3])[1] += delta;
+                }
+            } else {
+                boolean dolar = inv.getTipo() == TipoInvestimento.DOLAR;
+                var movs = todos ? movRepo.findByInvestimento(inv.getId())
+                                 : movRepo.findByInvestimentoEAno(inv.getId(), ano);
+                for (var mov : movs) {
+                    double delta = mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
+                    if (dolar) delta *= mov.getCotacaoDolar() != null ? mov.getCotacaoDolar() : cotacaoDolar;
+                    porMes.computeIfAbsent(mov.getPeriodoAno() * 100 + mov.getPeriodoMes(), k -> new double[3])[dolar ? 2 : 0] += delta;
+                }
+            }
+        }
+        List<AporteMensalPorTipo> resultado = new ArrayList<>();
+        porMes.forEach((chave, v) -> resultado.add(new AporteMensalPorTipo(chave % 100, chave / 100, v[0], v[1], v[2])));
+        return resultado;
     }
 
     public record VtraMensal(int mes, int ano, double vtra) {}
