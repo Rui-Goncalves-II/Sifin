@@ -54,6 +54,9 @@ public class DashboardPanel extends BorderPane {
     private int anoSelecionado;
     private boolean graficoAportesVisivel = false;
     private boolean graficoGastosVisivel = false;
+    // Fontes de rendimento somadas na coluna "Rendimentos" do Histórico Mensal
+    private boolean rendIncluiRf = true;
+    private boolean rendIncluiRv = true;
     private final Set<TipoInvestimento> tiposFiltro = EnumSet.allOf(TipoInvestimento.class);
 
     public DashboardPanel(InvestimentoRepository invRepo,
@@ -640,50 +643,90 @@ public class DashboardPanel extends BorderPane {
 
     // ── Histórico mensal (tabela) ────────────────────────────────────────
 
+    /** Linha do Histórico Mensal: um mês (pai) ou um ativo daquele mês (filho do drill-down). */
+    private record LinhaExtrato(String label, boolean mes, double aplicado,
+                                double rendRf, double rendRv, double total) {}
+
     private VBox buildExtratoTable(double dolarBrl) {
         List<ConsolidacaoService.ExtratoMensal> dados =
                 consolSvc.calcularExtratoPorMes(anoSelecionado, tiposFiltro, dolarBrl);
 
-        TableView<ConsolidacaoService.ExtratoMensal> table = new TableView<>();
-        table.getStyleClass().add("table-view");
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        TreeTableView<LinhaExtrato> table = new TreeTableView<>();
+        table.getStyleClass().addAll("table-view", "extrato-tree");
+        table.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
         table.setPlaceholder(new Label("Sem dados para o período selecionado"));
+        table.setShowRoot(false);
 
-        TableColumn<ConsolidacaoService.ExtratoMensal, String> colData = new TableColumn<>("Data");
+        TreeItem<LinhaExtrato> root = new TreeItem<>();
+        for (ConsolidacaoService.ExtratoMensal m : dados) {
+            TreeItem<LinhaExtrato> mesItem = new TreeItem<>(new LinhaExtrato(
+                    FormatUtil.mesAno(m.mes(), m.ano()), true,
+                    m.valorAplicado(), m.rendimentoRf(), m.rendimentoRv(), m.valorTotal()));
+            for (ConsolidacaoService.ExtratoAtivo at : m.ativos()) {
+                mesItem.getChildren().add(new TreeItem<>(new LinhaExtrato(
+                        at.nome(), false, at.valorAplicado(), at.rendimentoRf(), at.rendimentoRv(), at.valorTotal())));
+            }
+            root.getChildren().add(mesItem);
+        }
+        table.setRoot(root);
+
+        // clicar na linha do mês abre/fecha o detalhe por ativo
+        table.setRowFactory(tv -> {
+            TreeTableRow<LinhaExtrato> row = new TreeTableRow<>() {
+                @Override protected void updateItem(LinhaExtrato item, boolean empty) {
+                    super.updateItem(item, empty);
+                    getStyleClass().remove("extrato-ativo");
+                    if (!empty && item != null && !item.mes()) getStyleClass().add("extrato-ativo");
+                }
+            };
+            row.setOnMouseClicked(ev -> {
+                TreeItem<LinhaExtrato> it = row.getTreeItem();
+                if (row.isEmpty() || it == null || it.isLeaf()) return;
+                // o clique na própria seta já alterna; evita alternar duas vezes
+                if (ev.getTarget() instanceof Node n && isDentroDaSeta(n)) return;
+                it.setExpanded(!it.isExpanded());
+            });
+            return row;
+        });
+
+        TreeTableColumn<LinhaExtrato, String> colData = new TreeTableColumn<>("Data / Ativo");
         colData.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                FormatUtil.mesAno(c.getValue().mes(), c.getValue().ano())));
-        colData.setMinWidth(colW("Data", 90));
-        colData.setPrefWidth(100);
+                c.getValue().getValue() == null ? "" : c.getValue().getValue().label()));
+        colData.setMinWidth(colW("Data / Ativo", 160));
+        colData.setPrefWidth(200);
 
-        TableColumn<ConsolidacaoService.ExtratoMensal, String> colAplicado = new TableColumn<>("Valor Aplicado");
+        TreeTableColumn<LinhaExtrato, String> colAplicado = new TreeTableColumn<>("Valor Aplicado");
         colAplicado.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                FormatUtil.brl(c.getValue().valorAplicado())));
+                c.getValue().getValue() == null ? "" : FormatUtil.brl(c.getValue().getValue().aplicado())));
         colAplicado.setMinWidth(colW("Valor Aplicado", 130));
 
-        TableColumn<ConsolidacaoService.ExtratoMensal, String> colRend = new TableColumn<>("Rendimentos");
-        colRend.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                FormatUtil.brl(c.getValue().valorRendimento())));
-        colRend.setCellFactory(col -> new TableCell<>() {
-            @Override protected void updateItem(String item, boolean empty) {
+        // Toggles só fazem sentido com RF e RV ativos no filtro global; senão a soma já é de um tipo só.
+        boolean podeEscolherRend = tiposFiltro.contains(TipoInvestimento.RENDA_FIXA)
+                && tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL);
+        java.util.function.ToDoubleFunction<LinhaExtrato> rendSel = e -> !podeEscolherRend
+                ? e.rendRf() + e.rendRv()
+                : (rendIncluiRf ? e.rendRf() : 0) + (rendIncluiRv ? e.rendRv() : 0);
+
+        TreeTableColumn<LinhaExtrato, Number> colRend = new TreeTableColumn<>(rendColHeader(podeEscolherRend));
+        colRend.setCellValueFactory(c -> new javafx.beans.property.SimpleDoubleProperty(
+                c.getValue().getValue() == null ? 0 : rendSel.applyAsDouble(c.getValue().getValue())));
+        colRend.setCellFactory(col -> new TreeTableCell<>() {
+            @Override protected void updateItem(Number item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) { setText(null); setStyle(""); return; }
-                setText(item);
-                int idx = getIndex();
-                if (idx >= 0 && idx < getTableView().getItems().size()) {
-                    double v = getTableView().getItems().get(idx).valorRendimento();
-                    setStyle("-fx-text-fill: " + (v >= 0 ? "#3fb950" : "#f85149") + ";");
-                }
+                double v = item.doubleValue();
+                setText(FormatUtil.brl(v));
+                setStyle("-fx-text-fill: " + (v >= 0 ? "#3fb950" : "#f85149") + ";");
             }
         });
         colRend.setMinWidth(colW("Rendimentos", 130));
 
-        TableColumn<ConsolidacaoService.ExtratoMensal, String> colTotal = new TableColumn<>("Valor Total");
+        TreeTableColumn<LinhaExtrato, String> colTotal = new TreeTableColumn<>("Valor Total");
         colTotal.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                FormatUtil.brl(c.getValue().valorTotal())));
+                c.getValue().getValue() == null ? "" : FormatUtil.brl(c.getValue().getValue().total())));
         colTotal.setMinWidth(colW("Valor Total", 130));
 
         table.getColumns().addAll(colData, colAplicado, colRend, colTotal);
-        table.getItems().addAll(dados);
 
         int rowH = 32, headerH = 30;
         if (anoSelecionado == ConsolidacaoService.ANO_TODOS) {
@@ -695,9 +738,49 @@ public class DashboardPanel extends BorderPane {
 
         Label titleLbl = new Label("Histórico Mensal");
         titleLbl.getStyleClass().add("section-title");
-        VBox box = new VBox(8, titleLbl, table);
+        HBox hdr = new HBox(8, titleLbl);
+        hdr.setAlignment(Pos.CENTER_LEFT);
+
+        if (podeEscolherRend) {
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+            Label lblRend = new Label("Rendimentos de:");
+            lblRend.getStyleClass().add("card-label");
+            Button togRf = new Button("Renda Fixa");
+            Button togRv = new Button("Dividendos RV");
+            togRf.getStyleClass().addAll("pill-btn", "pill-chart", "pill-rf");
+            togRv.getStyleClass().addAll("pill-btn", "pill-chart", "pill-rv");
+            Runnable atualizar = () -> {
+                togRf.getStyleClass().remove("active");
+                togRv.getStyleClass().remove("active");
+                if (rendIncluiRf) togRf.getStyleClass().add("active");
+                if (rendIncluiRv) togRv.getStyleClass().add("active");
+                colRend.setText(rendColHeader(true));
+                table.refresh();
+            };
+            // não permite desligar os dois ao mesmo tempo
+            togRf.setOnAction(e -> { if (!rendIncluiRf || rendIncluiRv) { rendIncluiRf = !rendIncluiRf; atualizar.run(); } });
+            togRv.setOnAction(e -> { if (!rendIncluiRv || rendIncluiRf) { rendIncluiRv = !rendIncluiRv; atualizar.run(); } });
+            atualizar.run();
+            hdr.getChildren().addAll(spacer, lblRend, togRf, togRv);
+        }
+
+        VBox box = new VBox(8, hdr, table);
         box.getStyleClass().add("card");
         return box;
+    }
+
+    private static boolean isDentroDaSeta(Node n) {
+        for (Node p = n; p != null; p = p.getParent()) {
+            if (p.getStyleClass().contains("tree-disclosure-node")) return true;
+            if (p instanceof TreeTableRow) return false;
+        }
+        return false;
+    }
+
+    private String rendColHeader(boolean podeEscolher) {
+        if (!podeEscolher || (rendIncluiRf && rendIncluiRv)) return "Rendimentos";
+        return rendIncluiRf ? "Rendimentos (RF)" : "Rendimentos (Dividendos)";
     }
 
     // ── Aporte líquido por tipo (tabela + gráfico opcional) ─────────────

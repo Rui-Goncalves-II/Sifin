@@ -258,6 +258,18 @@
     -fx-background-color: #161b22;
 }
 
+/* ── Histórico Mensal (drill-down por ativo) ─────────────────────── */
+.extrato-tree .tree-table-row-cell { -fx-cell-size: 40px; -fx-background-color: #161b22; -fx-cursor: hand; }
+.extrato-tree .tree-table-row-cell:odd      { -fx-background-color: #161b22; }
+.extrato-tree .tree-table-row-cell:even     { -fx-background-color: #131820; }
+.extrato-tree .tree-table-row-cell:selected { -fx-background-color: #1c2c40; }
+.extrato-tree .tree-table-row-cell:hover    { -fx-background-color: #1c2230; }
+.extrato-tree .tree-table-row-cell.extrato-ativo          { -fx-cell-size: 32px; -fx-background-color: #0f1319; -fx-cursor: default; }
+.extrato-tree .tree-table-row-cell.extrato-ativo:selected { -fx-background-color: #17243a; }
+.extrato-tree .tree-table-row-cell.extrato-ativo .tree-table-cell { -fx-font-size: 12px; -fx-text-fill: #7d8fa0; }
+.extrato-tree .tree-table-cell { -fx-padding: 0 12; -fx-text-fill: #e6edf3; -fx-border-color: transparent; }
+.extrato-tree .tree-disclosure-node .arrow { -fx-background-color: #7d8fa0; }
+
 /* ── Buttons ──────────────────────────────────────────────────────── */
 .btn-primary {
     -fx-background-color: #3fb950;

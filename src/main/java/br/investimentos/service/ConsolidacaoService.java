@@ -274,7 +274,17 @@ public class ConsolidacaoService {
         return resultado;
     }
 
-    public record ExtratoMensal(int mes, int ano, double valorAplicado, double valorRendimento, double valorTotal) {}
+    public record ExtratoMensal(int mes, int ano, double valorAplicado,
+                                double rendimentoRf, double rendimentoRv, double valorTotal,
+                                List<ExtratoAtivo> ativos) {
+        public double valorRendimento() { return rendimentoRf + rendimentoRv; }
+    }
+
+    /** Detalhe de um ativo dentro de um mês do histórico (drill-down). */
+    public record ExtratoAtivo(String nome, TipoInvestimento tipo, double valorAplicado,
+                               double rendimentoRf, double rendimentoRv, double valorTotal) {
+        public double valorRendimento() { return rendimentoRf + rendimentoRv; }
+    }
 
     public record PatrimonioMensal(int mes, int ano, double pta) {}
 
@@ -375,6 +385,7 @@ public class ConsolidacaoService {
         Map<Integer, List<AporteRv>>     apMap       = new HashMap<>();
         Map<Integer, List<Movimentacao>> movRfMap    = new HashMap<>();
         Map<Integer, List<Movimentacao>> movDolarMap = new HashMap<>();
+        Map<Integer, String>             nomes       = new HashMap<>();
         TreeSet<Integer> chaves = new TreeSet<>();
 
         if (tipos.contains(TipoInvestimento.RENDA_FIXA)) {
@@ -383,6 +394,7 @@ public class ConsolidacaoService {
                 List<Movimentacao> movs = movRepo.findByInvestimento(inv.getId());
                 vtaMap.put(inv.getId(), vtas);
                 movRfMap.put(inv.getId(), movs);
+                nomes.put(inv.getId(), inv.getNome());
                 vtas.stream().filter(v -> todos || v.getPeriodoAno() == ano)
                     .forEach(v -> chaves.add(v.getPeriodoAno() * 100 + v.getPeriodoMes()));
                 movs.stream().filter(m -> todos || m.getPeriodoAno() == ano)
@@ -394,6 +406,7 @@ public class ConsolidacaoService {
             for (Investimento inv : invRepo.findByTipo(TipoInvestimento.RENDA_VARIAVEL)) {
                 vacMap.put(inv.getId(), vacRepo.findByInvestimento(inv.getId()));
                 apMap.put(inv.getId(), aporteRepo.findByInvestimento(inv.getId()));
+                nomes.put(inv.getId(), inv.getNome());
                 vacMap.get(inv.getId()).stream().filter(v -> todos || v.getPeriodoAno() == ano)
                     .forEach(v -> chaves.add(v.getPeriodoAno() * 100 + v.getPeriodoMes()));
                 apMap.get(inv.getId()).stream().filter(a -> todos || a.getPeriodoAno() == ano)
@@ -405,6 +418,7 @@ public class ConsolidacaoService {
             for (Investimento inv : invRepo.findByTipo(TipoInvestimento.DOLAR)) {
                 List<Movimentacao> movs = movRepo.findByInvestimento(inv.getId());
                 movDolarMap.put(inv.getId(), movs);
+                nomes.put(inv.getId(), inv.getNome());
                 movs.stream().filter(m -> todos || m.getPeriodoAno() == ano)
                     .forEach(m -> chaves.add(m.getPeriodoAno() * 100 + m.getPeriodoMes()));
             }
@@ -432,50 +446,68 @@ public class ConsolidacaoService {
         for (int chave : chaves) {
             int m = chave % 100;
             int a = chave / 100;
-            double aplicado = 0, rendimento = 0, total = 0;
+            List<ExtratoAtivo> ativos = new ArrayList<>();
 
             // ── Renda Fixa ──────────────────────────────────────────────────
             for (Map.Entry<Integer, List<VtaMensal>> e : vtaMap.entrySet()) {
                 int id = e.getKey();
+                double apl = 0;
                 for (Movimentacao mov : movRfMap.getOrDefault(id, List.of()))
                     if (mov.getPeriodoAno() * 100 + mov.getPeriodoMes() == chave)
-                        aplicado += mov.getTipoMov() == TipoMovimentacao.DEPOSITO
+                        apl += mov.getTipoMov() == TipoMovimentacao.DEPOSITO
                                 ? mov.getValor() : -mov.getValor();
-                rendimento += rIncMap.getOrDefault(id, Map.of()).getOrDefault(chave, 0.0);
-                total += e.getValue().stream()
+                double rend = rIncMap.getOrDefault(id, Map.of()).getOrDefault(chave, 0.0);
+                double tot = e.getValue().stream()
                         .filter(v -> v.getPeriodoAno() * 100 + v.getPeriodoMes() <= chave)
                         .mapToDouble(VtaMensal::getVta).reduce(0.0, (x, y) -> y);
+                ativos.add(new ExtratoAtivo(nomes.get(id), TipoInvestimento.RENDA_FIXA, apl, rend, 0, tot));
             }
 
             // ── Renda Variável ──────────────────────────────────────────────
             for (int id : vacMap.keySet()) {
+                double apl = 0, div = 0, tot = 0;
                 for (AporteRv ap : apMap.getOrDefault(id, List.of())) {
                     int apChave = ap.getPeriodoAno() * 100 + ap.getPeriodoMes();
                     if (apChave != chave) continue;
-                    if (ap.getTipoOp() == TipoOperacaoRv.COMPRA)         aplicado   += ap.getValor();
-                    else if (ap.getTipoOp() == TipoOperacaoRv.DIVIDENDO) rendimento += ap.getValor();
+                    if (ap.getTipoOp() == TipoOperacaoRv.COMPRA)         apl += ap.getValor();
+                    else if (ap.getTipoOp() == TipoOperacaoRv.DIVIDENDO) div += ap.getValor();
                 }
                 double vac = vacMap.get(id).stream()
                         .filter(v -> v.getPeriodoAno() * 100 + v.getPeriodoMes() <= chave)
                         .mapToDouble(VacMensal::getVac).reduce(0.0, (x, y) -> y);
                 if (vac > 0) {
-                    total += calcularQcAteChave(apMap.getOrDefault(id, List.of()), chave) * vac;
+                    tot = calcularQcAteChave(apMap.getOrDefault(id, List.of()), chave) * vac;
                 }
+                ativos.add(new ExtratoAtivo(nomes.get(id), TipoInvestimento.RENDA_VARIAVEL, apl, 0, div, tot));
             }
 
             // ── Dólar ───────────────────────────────────────────────────────
-            for (List<Movimentacao> movs : movDolarMap.values()) {
-                double usd = 0;
-                for (Movimentacao mov : movs) {
+            for (Map.Entry<Integer, List<Movimentacao>> e : movDolarMap.entrySet()) {
+                double usd = 0, apl = 0;
+                for (Movimentacao mov : e.getValue()) {
                     int mc = mov.getPeriodoAno() * 100 + mov.getPeriodoMes();
                     double delta = mov.getTipoMov() == TipoMovimentacao.DEPOSITO ? mov.getValor() : -mov.getValor();
-                    if (mc == chave) aplicado += delta * cotacaoDolar;
+                    if (mc == chave) apl += delta * cotacaoDolar;
                     if (mc <= chave) usd += delta;
                 }
-                total += Math.max(0, usd) * cotacaoDolar;
+                ativos.add(new ExtratoAtivo(nomes.get(e.getKey()), TipoInvestimento.DOLAR,
+                        apl, 0, 0, Math.max(0, usd) * cotacaoDolar));
             }
 
-            resultado.add(new ExtratoMensal(m, a, aplicado, rendimento, total));
+            double aplicado = 0, rendRf = 0, rendRv = 0, total = 0;
+            for (ExtratoAtivo x : ativos) {
+                aplicado += x.valorAplicado(); rendRf += x.rendimentoRf();
+                rendRv += x.rendimentoRv();    total  += x.valorTotal();
+            }
+            // no drill-down, só ativos com algo naquele mês (movimento, rendimento ou saldo)
+            List<ExtratoAtivo> visiveis = ativos.stream()
+                    .filter(x -> Math.abs(x.valorAplicado()) > 0.005 || Math.abs(x.valorRendimento()) > 0.005
+                              || x.valorTotal() > 0.005)
+                    .sorted(java.util.Comparator.comparing(ExtratoAtivo::tipo)
+                            .thenComparing(x -> x.nome() == null ? "" : x.nome(), String.CASE_INSENSITIVE_ORDER))
+                    .toList();
+
+            resultado.add(new ExtratoMensal(m, a, aplicado, rendRf, rendRv, total, visiveis));
         }
 
         resultado.sort((x, y) -> (x.ano() * 100 + x.mes()) - (y.ano() * 100 + y.mes()));
