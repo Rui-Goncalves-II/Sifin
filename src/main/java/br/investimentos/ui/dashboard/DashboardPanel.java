@@ -664,7 +664,7 @@ public class DashboardPanel extends BorderPane {
                 ? e.rendRf() + e.rendRv()
                 : (rendIncluiRf ? e.rendRf() : 0) + (rendIncluiRv ? e.rendRv() : 0);
 
-        // Drill-down: só ativos com rendimento (respeitando os toggles RF/RV) no mês.
+        // Drill-down: só ativos com rendimento (respeitando os toggles RF/RV) ou valor aplicado no mês.
         // Reconstruído ao alternar os toggles, preservando os meses que estavam abertos.
         Runnable popular = () -> {
             Set<String> abertos = new java.util.HashSet<>();
@@ -679,7 +679,7 @@ public class DashboardPanel extends BorderPane {
                 for (ConsolidacaoService.ExtratoAtivo at : m.ativos()) {
                     LinhaExtrato le = new LinhaExtrato(at.nome(), false, at.valorAplicado(),
                             at.rendimentoRf(), at.rendimentoRv(), at.valorTotal());
-                    if (Math.abs(rendSel.applyAsDouble(le)) > 0.005)
+                    if (Math.abs(rendSel.applyAsDouble(le)) > 0.005 || Math.abs(le.aplicado()) > 0.005)
                         mesItem.getChildren().add(new TreeItem<>(le));
                 }
                 mesItem.setExpanded(abertos.contains(lbl) && !mesItem.isLeaf());
