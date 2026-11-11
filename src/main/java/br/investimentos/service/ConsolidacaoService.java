@@ -499,10 +499,9 @@ public class ConsolidacaoService {
                 aplicado += x.valorAplicado(); rendRf += x.rendimentoRf();
                 rendRv += x.rendimentoRv();    total  += x.valorTotal();
             }
-            // no drill-down, só ativos com algo naquele mês (movimento, rendimento ou saldo)
+            // no drill-down, só ativos que tiveram rendimento naquele mês
             List<ExtratoAtivo> visiveis = ativos.stream()
-                    .filter(x -> Math.abs(x.valorAplicado()) > 0.005 || Math.abs(x.valorRendimento()) > 0.005
-                              || x.valorTotal() > 0.005)
+                    .filter(x -> Math.abs(x.valorRendimento()) > 0.005)
                     .sorted(java.util.Comparator.comparing(ExtratoAtivo::tipo)
                             .thenComparing(x -> x.nome() == null ? "" : x.nome(), String.CASE_INSENSITIVE_ORDER))
                     .toList();

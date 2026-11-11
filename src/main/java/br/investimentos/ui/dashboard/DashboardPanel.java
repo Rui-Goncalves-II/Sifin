@@ -657,18 +657,37 @@ public class DashboardPanel extends BorderPane {
         table.setPlaceholder(new Label("Sem dados para o período selecionado"));
         table.setShowRoot(false);
 
-        TreeItem<LinhaExtrato> root = new TreeItem<>();
-        for (ConsolidacaoService.ExtratoMensal m : dados) {
-            TreeItem<LinhaExtrato> mesItem = new TreeItem<>(new LinhaExtrato(
-                    FormatUtil.mesAno(m.mes(), m.ano()), true,
-                    m.valorAplicado(), m.rendimentoRf(), m.rendimentoRv(), m.valorTotal()));
-            for (ConsolidacaoService.ExtratoAtivo at : m.ativos()) {
-                mesItem.getChildren().add(new TreeItem<>(new LinhaExtrato(
-                        at.nome(), false, at.valorAplicado(), at.rendimentoRf(), at.rendimentoRv(), at.valorTotal())));
+        // Toggles só fazem sentido com RF e RV ativos no filtro global; senão a soma já é de um tipo só.
+        boolean podeEscolherRend = tiposFiltro.contains(TipoInvestimento.RENDA_FIXA)
+                && tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL);
+        java.util.function.ToDoubleFunction<LinhaExtrato> rendSel = e -> !podeEscolherRend
+                ? e.rendRf() + e.rendRv()
+                : (rendIncluiRf ? e.rendRf() : 0) + (rendIncluiRv ? e.rendRv() : 0);
+
+        // Drill-down: só ativos com rendimento (respeitando os toggles RF/RV) no mês.
+        // Reconstruído ao alternar os toggles, preservando os meses que estavam abertos.
+        Runnable popular = () -> {
+            Set<String> abertos = new java.util.HashSet<>();
+            if (table.getRoot() != null)
+                for (TreeItem<LinhaExtrato> it : table.getRoot().getChildren())
+                    if (it.isExpanded()) abertos.add(it.getValue().label());
+            TreeItem<LinhaExtrato> root = new TreeItem<>();
+            for (ConsolidacaoService.ExtratoMensal m : dados) {
+                String lbl = FormatUtil.mesAno(m.mes(), m.ano());
+                TreeItem<LinhaExtrato> mesItem = new TreeItem<>(new LinhaExtrato(lbl, true,
+                        m.valorAplicado(), m.rendimentoRf(), m.rendimentoRv(), m.valorTotal()));
+                for (ConsolidacaoService.ExtratoAtivo at : m.ativos()) {
+                    LinhaExtrato le = new LinhaExtrato(at.nome(), false, at.valorAplicado(),
+                            at.rendimentoRf(), at.rendimentoRv(), at.valorTotal());
+                    if (Math.abs(rendSel.applyAsDouble(le)) > 0.005)
+                        mesItem.getChildren().add(new TreeItem<>(le));
+                }
+                mesItem.setExpanded(abertos.contains(lbl) && !mesItem.isLeaf());
+                root.getChildren().add(mesItem);
             }
-            root.getChildren().add(mesItem);
-        }
-        table.setRoot(root);
+            table.setRoot(root);
+        };
+        popular.run();
 
         // clicar na linha do mês abre/fecha o detalhe por ativo
         table.setRowFactory(tv -> {
@@ -700,12 +719,6 @@ public class DashboardPanel extends BorderPane {
                 c.getValue().getValue() == null ? "" : FormatUtil.brl(c.getValue().getValue().aplicado())));
         colAplicado.setMinWidth(colW("Valor Aplicado", 130));
 
-        // Toggles só fazem sentido com RF e RV ativos no filtro global; senão a soma já é de um tipo só.
-        boolean podeEscolherRend = tiposFiltro.contains(TipoInvestimento.RENDA_FIXA)
-                && tiposFiltro.contains(TipoInvestimento.RENDA_VARIAVEL);
-        java.util.function.ToDoubleFunction<LinhaExtrato> rendSel = e -> !podeEscolherRend
-                ? e.rendRf() + e.rendRv()
-                : (rendIncluiRf ? e.rendRf() : 0) + (rendIncluiRv ? e.rendRv() : 0);
 
         TreeTableColumn<LinhaExtrato, Number> colRend = new TreeTableColumn<>(rendColHeader(podeEscolherRend));
         colRend.setCellValueFactory(c -> new javafx.beans.property.SimpleDoubleProperty(
@@ -756,7 +769,7 @@ public class DashboardPanel extends BorderPane {
                 if (rendIncluiRf) togRf.getStyleClass().add("active");
                 if (rendIncluiRv) togRv.getStyleClass().add("active");
                 colRend.setText(rendColHeader(true));
-                table.refresh();
+                popular.run();
             };
             // não permite desligar os dois ao mesmo tempo
             togRf.setOnAction(e -> { if (!rendIncluiRf || rendIncluiRv) { rendIncluiRf = !rendIncluiRf; atualizar.run(); } });
