@@ -36,6 +36,24 @@ public final class CrescimentoService {
         return new Crescimento(valorAnterior, aportesLiquidos, valorAtual, pct);
     }
 
+    /**
+     * Consolida vários ativos somando valores (não percentuais): o % resultante é ponderado
+     * pelo tamanho de cada posição. Ativos sem valor atual conhecido são excluídos por inteiro
+     * (base e valor), para não distorcer o total.
+     */
+    public static Crescimento somar(List<Crescimento> itens) {
+        double anterior = 0, aportes = 0, atual = 0;
+        boolean algum = false;
+        for (Crescimento c : itens) {
+            if (c.valorAtual() == null) continue;
+            anterior += c.valorAnterior();
+            aportes += c.aportesLiquidos();
+            atual += c.valorAtual();
+            algum = true;
+        }
+        return calcular(anterior, aportes, algum ? atual : null);
+    }
+
     // ── Renda Fixa ───────────────────────────────────────────────────────
 
     /**

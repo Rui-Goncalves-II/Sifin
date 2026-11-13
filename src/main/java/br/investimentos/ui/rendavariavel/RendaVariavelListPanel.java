@@ -13,6 +13,9 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class RendaVariavelListPanel extends BorderPane {
@@ -26,6 +29,7 @@ public class RendaVariavelListPanel extends BorderPane {
     private final Consumer<Node> navigate;
 
     private TableView<Investimento> table;
+    private final HBox resumo = new HBox(12);
     private String filtroSub = null;
 
     public RendaVariavelListPanel(InvestimentoRepository invRepo, AporteRvRepository aporteRepo,
@@ -128,7 +132,7 @@ public class RendaVariavelListPanel extends BorderPane {
             }
         });
 
-        VBox content = new VBox(table);
+        VBox content = new VBox(16, resumo, table);
         content.setPadding(new Insets(20, 24, 24, 24));
         VBox.setVgrow(table, Priority.ALWAYS);
         setCenter(content);
@@ -139,5 +143,34 @@ public class RendaVariavelListPanel extends BorderPane {
         var all = invRepo.findByTipo(TipoInvestimento.RENDA_VARIAVEL);
         if (filtroSub != null) all = all.stream().filter(i -> filtroSub.equals(i.getSubtipo())).toList();
         table.getItems().setAll(all);
+        atualizarResumo(all);
+    }
+
+    /** Crescimento consolidado da RV (ativos do filtro atual), somando valores — não percentuais. */
+    private void atualizarResumo(List<Investimento> ativos) {
+        int ano = LocalDate.now().getYear();
+        List<CrescimentoService.Crescimento> doAno = new ArrayList<>();
+        List<CrescimentoService.Crescimento> total = new ArrayList<>();
+        for (Investimento inv : ativos) {
+            var aportes = aporteRepo.findByInvestimento(inv.getId());
+            var vacs = vacRepo.findByInvestimento(inv.getId());
+            doAno.add(CrescimentoService.rendaVariavel(aportes, vacs, ano));
+            total.add(CrescimentoService.rendaVariavel(aportes, vacs, CrescimentoService.ANO_TODOS));
+        }
+        String escopo = filtroSub == null ? "Renda Variável" : filtroSub;
+        resumo.getChildren().setAll(
+                card("Crescimento " + escopo + " " + ano, "VAC × QC (fim de " + (ano - 1) + ")", doAno),
+                card("Crescimento " + escopo + " Total", "Valor inicial", total));
+    }
+
+    private VBox card(String titulo, String rotuloAnterior, List<CrescimentoService.Crescimento> itens) {
+        long semValor = itens.stream().filter(c -> c.valorAtual() == null).count();
+        String nota = "Consolidado de " + itens.size() + " ativo(s): soma das bases e dos valores atuais "
+                + "(% ponderado pelo tamanho de cada posição, não soma de %).\n"
+                + "Dividendos não entram. Vendas descontam dos aportes."
+                + (semValor > 0 ? "\n" + semValor + " ativo(s) sem VAC registrado foram excluídos." : "");
+        VBox card = UIUtil.cardCrescimento(titulo, rotuloAnterior, CrescimentoService.somar(itens), nota);
+        card.setMinWidth(260);
+        return card;
     }
 }

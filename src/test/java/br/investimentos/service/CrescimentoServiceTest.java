@@ -34,6 +34,16 @@ class CrescimentoServiceTest {
         assertNull(CrescimentoService.calcular(1_000, 0, null).pct());
     }
 
+    @Test
+    void somar_ponderaPorValor_eIgnoraSemValorAtual() {
+        Crescimento c = CrescimentoService.somar(List.of(
+                CrescimentoService.calcular(0, 100, 150.0),        // +50%
+                CrescimentoService.calcular(0, 50_000, 47_500.0),  // −5%
+                CrescimentoService.calcular(0, 1_000, null)));     // excluído
+        assertEquals(50_100, c.base(), 1e-9);
+        assertEquals((47_650 - 50_100) / 50_100.0 * 100, c.pct(), 1e-9);
+    }
+
     // ── Renda Fixa ───────────────────────────────────────────────────────
 
     @Test
