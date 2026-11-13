@@ -1,6 +1,9 @@
 package br.investimentos.ui.util;
 
+import br.investimentos.service.CrescimentoService.Crescimento;
 import javafx.scene.Group;
+import javafx.scene.control.Label;
+import javafx.scene.layout.VBox;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -57,5 +60,35 @@ public final class UIUtil {
         iv.setFitHeight(size);
         iv.setSmooth(true);
         return iv;
+    }
+
+    /**
+     * Card de crescimento do patrimônio investido: (valor atual − base) / base.
+     * O tooltip detalha a conta e as limitações do indicador.
+     */
+    public static VBox cardCrescimento(String titulo, String rotuloAnterior, Crescimento c, String nota) {
+        VBox card = new VBox(4);
+        card.getStyleClass().add("card");
+        Label t = new Label(titulo);
+        t.getStyleClass().add("card-title");
+        String valor = c.pct() == null ? "—" : FormatUtil.sinalPct(c.pct());
+        String estilo = c.pct() == null ? "neutral" : (c.pct() >= 0 ? "positive" : "negative");
+        Label v = new Label(valor);
+        v.getStyleClass().addAll("card-value-sm", estilo);
+        card.getChildren().addAll(t, v);
+
+        StringBuilder tip = new StringBuilder("Crescimento do patrimônio investido\n")
+                .append("= (Valor atual − Base) / Base × 100\n\n")
+                .append(rotuloAnterior).append(": ").append(FormatUtil.brl(c.valorAnterior())).append('\n')
+                .append("+ Aportes líquidos: ").append(FormatUtil.brl(c.aportesLiquidos())).append('\n')
+                .append("= Base: ").append(FormatUtil.brl(c.base())).append('\n')
+                .append("Valor atual: ").append(c.valorAtual() == null ? "sem cotação/VTA" : FormatUtil.brl(c.valorAtual()));
+        if (c.diferenca() != null)
+            tip.append('\n').append("Diferença: ").append(FormatUtil.sinalBrl(c.diferenca()));
+        tip.append("\n\nRetorno simples: aportes feitos no fim do período pesam igual aos do início.");
+        if (nota != null) tip.append('\n').append(nota);
+        if (c.pct() == null) tip.append("\n\n— : sem base positiva ou sem valor atual registrado.");
+        GlossarioTooltip.instalar(card, tip.toString());
+        return card;
     }
 }

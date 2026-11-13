@@ -9,6 +9,7 @@ import br.investimentos.service.*;
 import br.investimentos.ui.projecao.ProjecaoPanel;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.GlossarioTooltip;
+import br.investimentos.ui.util.UIUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -158,6 +159,7 @@ public class RendaFixaDetalhePanel extends BorderPane {
             sumGrid.add(metricCard("Total Rendimento", FormatUtil.brl(rTotal), rTotal >= 0 ? "positive" : "negative"), 2, 0);
             sumGrid.add(metricCard("Rendimento %", pctStr, rTotal >= 0 ? "positive" : "negative"), 3, 0);
         }
+        sumGrid.add(buildCrescimentoCard(), 0, 1);
 
         // Info do ativo
         String subInfo = (inv.getSubtipo() != null ? inv.getSubtipo() : "—") +
@@ -510,6 +512,23 @@ public class RendaFixaDetalhePanel extends BorderPane {
         lbl.setStyle("-fx-text-fill: #7d8fa0; -fx-font-size: 15px; -fx-font-weight: bold;");
         GlossarioTooltip.aplicar(lbl, sigla);
         return lbl;
+    }
+
+    /** Base = VAI + aportes líquidos até a data do último VTA (= VI); valor atual = esse VTA. */
+    private VBox buildCrescimentoCard() {
+        CrescimentoService.Crescimento c;
+        if (anoSelecionado != ANO_TODOS) {
+            double vai = vaiRepo.getVai(inv.getId(), anoSelecionado);
+            Optional<VtaMensal> vta = vtaRepo.findUltimoDoAno(inv.getId(), anoSelecionado);
+            double aportes = vta.map(v -> rendSvc.calcularVi(inv.getId(), anoSelecionado,
+                            v.getPeriodoMes(), v.getPeriodoDia()) - vai)
+                    .orElseGet(() -> rendSvc.calcularSam(inv.getId(), anoSelecionado, 12, 31));
+            c = CrescimentoService.rendaFixa(vai, aportes, vta.map(VtaMensal::getVta).orElse(null));
+            return UIUtil.cardCrescimento("Crescimento " + anoSelecionado, "VAI (fim de " + (anoSelecionado - 1) + ")", c, null);
+        }
+        c = CrescimentoService.rendaFixa(0, rendSvc.calcularTotalAportado(inv.getId()),
+                vtaRepo.findUltimo(inv.getId()).map(VtaMensal::getVta).orElse(null));
+        return UIUtil.cardCrescimento("Crescimento Total", "Valor inicial", c, null);
     }
 
     private VBox metricCard(String title, String value, String valueStyle) {

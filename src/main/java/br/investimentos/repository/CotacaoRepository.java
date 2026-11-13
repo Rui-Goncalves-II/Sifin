@@ -43,6 +43,17 @@ public class CotacaoRepository {
         return Optional.empty();
     }
 
+    /** Última cotação registrada até a data informada (yyyy-MM-dd), inclusive. */
+    public Optional<CotacaoDolar> findUltimaAte(String data) {
+        String sql = "SELECT * FROM cotacoes_dolar WHERE data <= ? ORDER BY data DESC LIMIT 1";
+        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, data);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return Optional.of(map(rs));
+        } catch (SQLException e) { throw new RuntimeException(e); }
+        return Optional.empty();
+    }
+
     public List<CotacaoDolar> findAll() {
         List<CotacaoDolar> list = new ArrayList<>();
         String sql = "SELECT * FROM cotacoes_dolar ORDER BY data";

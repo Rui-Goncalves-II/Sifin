@@ -96,26 +96,31 @@ public final class GlossarioTooltip {
             if (labelText.equals(s)
                     || labelText.startsWith(s + " ")
                     || labelText.contains("(" + s + ")")) {
-                Tooltip tip = new Tooltip(entry.getValue());
-                tip.setShowDelay(Duration.millis(350));
-                tip.setHideDelay(Duration.ZERO);
-                tip.setWrapText(true);
-                tip.setMaxWidth(300);
-                tip.setStyle(
-                        "-fx-background-color: #1c2230;" +
-                        "-fx-border-color: #2a3441;" +
-                        "-fx-border-width: 1px;" +
-                        "-fx-text-fill: #e6edf3;" +
-                        "-fx-font-size: 16px;" +
-                        "-fx-padding: 8 12;"
-                );
-                Tooltip.install(node, tip);
-                node.addEventHandler(MouseEvent.MOUSE_EXITED, e -> tip.hide());
-                node.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
-                    if (!isFocused) tip.hide();
-                });
+                instalar(node, entry.getValue());
                 return;
             }
         }
+    }
+
+    /** Instala um tooltip com texto livre, no mesmo estilo do glossário. */
+    public static void instalar(Node node, String texto) {
+        Tooltip tip = new Tooltip(texto);
+        tip.setShowDelay(Duration.millis(350));
+        tip.setHideDelay(Duration.ZERO);
+        tip.setWrapText(true);
+        tip.setMaxWidth(300);
+        tip.setStyle(
+                "-fx-background-color: #1c2230;" +
+                "-fx-border-color: #2a3441;" +
+                "-fx-border-width: 1px;" +
+                "-fx-text-fill: #e6edf3;" +
+                "-fx-font-size: 16px;" +
+                "-fx-padding: 8 12;"
+        );
+        Tooltip.install(node, tip);
+        node.addEventHandler(MouseEvent.MOUSE_EXITED, e -> tip.hide());
+        node.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (!isFocused) tip.hide();
+        });
     }
 }

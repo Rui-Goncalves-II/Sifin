@@ -4,12 +4,15 @@ import br.investimentos.model.CotacaoDolar;
 import br.investimentos.model.Investimento;
 import br.investimentos.model.Movimentacao;
 import br.investimentos.model.enums.TipoMovimentacao;
+import br.investimentos.repository.CotacaoRepository;
 import br.investimentos.repository.InvestimentoRepository;
 import br.investimentos.repository.MovimentacaoRepository;
 import br.investimentos.service.ConsolidacaoService;
+import br.investimentos.service.CrescimentoService;
 import br.investimentos.service.CotacaoService;
 import br.investimentos.ui.util.FormatUtil;
 import br.investimentos.ui.util.GlossarioTooltip;
+import br.investimentos.ui.util.UIUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -30,6 +33,7 @@ public class DolarDetalhePanel extends BorderPane {
     private final MovimentacaoRepository movRepo;
     private final ConsolidacaoService consolSvc;
     private final CotacaoService cotacaoSvc;
+    private final CotacaoRepository cotacaoRepo = new CotacaoRepository();
     private final Consumer<Node> navigate;
 
     private int anoSelecionado;
@@ -170,6 +174,24 @@ public class DolarDetalhePanel extends BorderPane {
             grid.add(metricCard("Cotação Atual", cotCompraStr, "neutral"), 2, 1);
         }
 
+        // Crescimento do patrimônio investido (BRL)
+        double cotMercado = cotVenda > 0 ? cotVenda : cotCompra;
+        String nota = "Inclui variação cambial. Movimentações sem cotação usam a cotação atual.";
+        if (anoSelecionado != ANO_TODOS) {
+            Double cotAnoAnterior = cotacaoAte(anoSelecionado - 1);
+            Double cotAtualAno = anoSelecionado >= LocalDate.now().getYear()
+                    ? (cotMercado > 0 ? cotMercado : null)
+                    : cotacaoAte(anoSelecionado);
+            var cresc = CrescimentoService.dolar(todasMovs, anoSelecionado, cotAnoAnterior, cotAtualAno, cotCompra);
+            String rotulo = "USD × cotação (fim de " + (anoSelecionado - 1) + ")"
+                    + (cotAnoAnterior == null ? " — sem cotação, usado custo" : "");
+            grid.add(UIUtil.cardCrescimento("Crescimento " + anoSelecionado, rotulo, cresc, nota), 0, 2);
+        } else {
+            var cresc = CrescimentoService.dolar(todasMovs, ANO_TODOS, null,
+                    cotMercado > 0 ? cotMercado : null, cotCompra);
+            grid.add(UIUtil.cardCrescimento("Crescimento Total", "Valor inicial", cresc, nota), 3, 1);
+        }
+
         // Movimentações filtradas
         String movLabel = (anoSelecionado != ANO_TODOS)
                 ? "Movimentações — " + anoSelecionado
@@ -270,6 +292,14 @@ public class DolarDetalhePanel extends BorderPane {
 
         content.getChildren().addAll(grid, movTitle, movTable);
         return content;
+    }
+
+    /** Cotação de venda (ou compra) do último registro até 31/12 do ano; null se não houver. */
+    private Double cotacaoAte(int ano) {
+        return cotacaoRepo.findUltimaAte(ano + "-12-31")
+                .map(c -> c.getValorVenda() > 0 ? c.getValorVenda() : c.getValorCompra())
+                .filter(v -> v > 0)
+                .orElse(null);
     }
 
     private VBox metricCard(String title, String value, String style) {

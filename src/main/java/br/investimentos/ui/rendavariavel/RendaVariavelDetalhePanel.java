@@ -207,6 +207,15 @@ public class RendaVariavelDetalhePanel extends BorderPane {
         grid.add(metricCard("LEA", FormatUtil.brl(pos.lea()), pos.lea() >= 0 ? "positive" : "negative"), 2, 1);
         grid.add(metricCard("LEA %", FormatUtil.pct(pos.leaPct()), pos.leaPct() >= 0 ? "positive" : "negative"), 3, 1);
 
+        // Crescimento do patrimônio investido (sem dividendos)
+        var cresc = CrescimentoService.rendaVariavel(aporteRepo.findByInvestimento(inv.getId()),
+                vacRepo.findByInvestimento(inv.getId()), anoSelecionado);
+        String nota = "Dividendos não entram. Vendas descontam dos aportes. Valor = QC × último VAC registrado.";
+        grid.add(anoSelecionado != ANO_TODOS
+                ? UIUtil.cardCrescimento("Crescimento " + anoSelecionado,
+                        "VAC × QC (fim de " + (anoSelecionado - 1) + ")", cresc, nota)
+                : UIUtil.cardCrescimento("Crescimento Total", "Valor inicial", cresc, nota), 4, 1);
+
         // Tabela de operações
         String opLabel = (anoSelecionado != ANO_TODOS)
                 ? "Operações — " + anoSelecionado
